@@ -47,8 +47,8 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		bodyStr := string(body)
 		shortURL := getShortURL()
 		urls[shortURL] = bodyStr
-		res.WriteHeader(http.StatusCreated)
 		res.Header().Set("content-type", "text/plain")
+		res.WriteHeader(http.StatusCreated)
 		res.Write([]byte(req.URL.Host + shortURL))
 	} else if req.Method == "GET" {
 		urlsParts := strings.Split(req.URL.Path, "/")
