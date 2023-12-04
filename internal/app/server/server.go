@@ -47,7 +47,7 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		bodyStr := string(body)
 		shortURL := getShortURL()
 		urls[shortURL] = bodyStr
-		res.Header().Set("content-type", "text/plain")
+		res.Header().Add("content-type", "text/plain")
 		res.WriteHeader(http.StatusCreated)
 		res.Write([]byte(req.URL.Host + shortURL))
 	} else if req.Method == http.MethodGet {
@@ -57,10 +57,9 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		if !ok {
 			res.WriteHeader(http.StatusBadRequest)
 		} else {
-			res.Header().Set("content-type", "text/plain")
+			res.Header().Add("content-type", "text/plain")
 			res.Header().Add("location", originalURL)
 			res.WriteHeader(http.StatusTemporaryRedirect)
-			res.Write([]byte(originalURL))
 		}
 	} else {
 		res.WriteHeader(http.StatusBadRequest)
