@@ -23,7 +23,6 @@ func initHandlers() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", mainHandler)
-	mux.HandleFunc("/getid/", getidHandler)
 
 	return mux
 }
@@ -54,13 +53,7 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		res.Header().Set("content-type", "text/plain")
 		res.Write([]byte("http://localhost:8080/" + shortUrl))
-	} else {
-		res.WriteHeader(http.StatusBadRequest)
-	}
-}
-
-func getidHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method == "GET" {
+	} else if req.Method == "GET" {
 		urlsParts := strings.Split(req.URL.Path, "/")
 		shortUrl := urlsParts[len(urlsParts)-1]
 		originalUrl, ok := urls[shortUrl]
@@ -70,5 +63,7 @@ func getidHandler(res http.ResponseWriter, req *http.Request) {
 			res.Header().Add("Location", originalUrl)
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
+	} else {
+		res.WriteHeader(http.StatusBadRequest)
 	}
 }
