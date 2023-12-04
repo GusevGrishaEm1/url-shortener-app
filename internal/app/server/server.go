@@ -57,7 +57,7 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		if !ok {
 			res.WriteHeader(http.StatusBadRequest)
 		} else {
-			res.Header().Add("Location", originalURL)
+			res.Header().Add("location", originalURL)
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
 	} else {
