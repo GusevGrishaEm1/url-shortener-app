@@ -27,16 +27,16 @@ func initHandlers() *http.ServeMux {
 	return mux
 }
 
-func getShortUrl() string {
-	shortUrl := make([]byte, 5)
-	var uniqueShortUrl string
+func getShortURL() string {
+	shortURL := make([]byte, 5)
+	var uniqueShortURL string
 	for {
-		for i := range shortUrl {
-			shortUrl[i] = letterBytes[rand.Intn(len(letterBytes))]
+		for i := range shortURL {
+			shortURL[i] = letterBytes[rand.Intn(len(letterBytes))]
 		}
-		uniqueShortUrl = string(shortUrl)
-		if _, ok := urls[uniqueShortUrl]; !ok {
-			return uniqueShortUrl
+		uniqueShortURL = string(shortURL)
+		if _, ok := urls[uniqueShortURL]; !ok {
+			return uniqueShortURL
 		}
 	}
 }
@@ -45,19 +45,19 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" && req.Header.Get("content-type") == "text/plain" {
 		body, _ := io.ReadAll(req.Body)
 		bodyStr := string(body)
-		shortUrl := getShortUrl()
-		urls[shortUrl] = bodyStr
+		shortURL := getShortURL()
+		urls[shortURL] = bodyStr
 		res.WriteHeader(http.StatusCreated)
 		res.Header().Set("content-type", "text/plain")
-		res.Write([]byte(req.URL.Host + shortUrl))
+		res.Write([]byte(req.URL.Host + shortURL))
 	} else if req.Method == "GET" {
 		urlsParts := strings.Split(req.URL.Path, "/")
-		shortUrl := urlsParts[len(urlsParts)-1]
-		originalUrl, ok := urls[shortUrl]
+		shortURL := urlsParts[len(urlsParts)-1]
+		originalURL, ok := urls[shortURL]
 		if !ok {
 			res.WriteHeader(http.StatusBadRequest)
 		} else {
-			res.Header().Add("Location", originalUrl)
+			res.Header().Add("Location", originalURL)
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
 	} else {
