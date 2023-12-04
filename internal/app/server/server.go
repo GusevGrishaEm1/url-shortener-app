@@ -61,6 +61,6 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
 	} else {
-		res.WriteHeader(http.StatusBadRequest)
+		res.WriteHeader(http.StatusPaymentRequired)
 	}
 }
