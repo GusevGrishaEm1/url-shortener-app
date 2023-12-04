@@ -43,10 +43,7 @@ func getShortUrl() string {
 
 func mainHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" && req.Header.Get("content-type") == "text/plain" {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-		}
+		body, _ := io.ReadAll(req.Body)
 		bodyStr := string(body)
 		shortUrl := getShortUrl()
 		urls[shortUrl] = bodyStr
