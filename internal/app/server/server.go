@@ -50,7 +50,7 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		bodyStr := string(body)
 		shortUrl := getShortUrl()
 		urls[shortUrl] = bodyStr
-		res.WriteHeader(http.StatusOK)
+		res.WriteHeader(http.StatusCreated)
 		res.Header().Set("content-type", "text/plain")
 		res.Write([]byte("http://localhost:8080/" + shortUrl))
 	} else if req.Method == "GET" {
