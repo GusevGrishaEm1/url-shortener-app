@@ -42,7 +42,7 @@ func getShortURL() string {
 }
 
 func mainHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method == "POST" && req.Header.Get("content-type") == "text/plain" {
+	if req.Method == "POST" {
 		body, _ := io.ReadAll(req.Body)
 		bodyStr := string(body)
 		shortURL := getShortURL()
