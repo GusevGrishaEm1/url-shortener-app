@@ -42,7 +42,7 @@ func getShortURL() string {
 }
 
 func mainHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method == "POST" {
+	if req.Method == http.MethodPost {
 		body, _ := io.ReadAll(req.Body)
 		bodyStr := string(body)
 		shortURL := getShortURL()
@@ -50,7 +50,7 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		res.Header().Set("content-type", "text/plain")
 		res.WriteHeader(http.StatusCreated)
 		res.Write([]byte(req.URL.Host + shortURL))
-	} else if req.Method == "GET" {
+	} else if req.Method == http.MethodGet {
 		urlsParts := strings.Split(req.URL.Path, "/")
 		shortURL := urlsParts[len(urlsParts)-1]
 		originalURL, ok := urls[shortURL]
@@ -61,6 +61,6 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
 	} else {
-		res.WriteHeader(http.StatusPaymentRequired)
+		res.WriteHeader(http.StatusBadRequest)
 	}
 }
