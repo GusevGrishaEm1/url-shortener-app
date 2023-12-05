@@ -9,9 +9,10 @@ import (
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-var urls map[string]string = make(map[string]string)
+var urls map[string]string
 
 func Init() {
+	urls = make(map[string]string)
 	mux := initHandlers()
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {
@@ -57,7 +58,7 @@ func mainHandler(res http.ResponseWriter, req *http.Request) {
 		if !ok {
 			res.WriteHeader(http.StatusBadRequest)
 		} else {
-			res.Header().Add("Location", "http://"+originalURL)
+			res.Header().Add("Location", originalURL)
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
 	} else {
