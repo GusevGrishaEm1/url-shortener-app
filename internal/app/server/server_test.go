@@ -13,8 +13,8 @@ import (
 )
 
 func TestShortenerHandler(t *testing.T) {
-	var host string = "http://localhost:8080/"
-	var originalURL string = "https://practicum.yandex.ru/"
+	host := "http://localhost:8080/"
+	originalURL := "https://practicum.yandex.ru/"
 	var shortURL string
 	t.Run("test POST", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(originalURL)))
