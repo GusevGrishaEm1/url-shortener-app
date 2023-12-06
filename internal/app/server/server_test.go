@@ -34,6 +34,7 @@ func TestShortenerHandler(t *testing.T) {
 		w := httptest.NewRecorder()
 		ShortenerHandler(w, request)
 		res := w.Result()
+		defer res.Body.Close()
 		assert.Equal(t, 307, res.StatusCode)
 		assert.Equal(t, res.Header.Get("Location"), originalURL)
 	})
