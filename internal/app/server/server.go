@@ -32,11 +32,18 @@ func ShortenerHandler(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusBadRequest)
 		} else {
 			bodyStr := string(body)
-			shortURL := GetShortURL()
-			urls[shortURL] = bodyStr
-			res.Header().Add("content-type", "text/plain")
-			res.WriteHeader(http.StatusCreated)
-			res.Write([]byte("http://localhost:8080/" + shortURL))
+			if bodyStr != "" {
+				shortURL := getShortURL()
+				for _, ok := urls[shortURL]; ok; {
+					shortURL = getShortURL()
+				}
+				urls[shortURL] = bodyStr
+				res.Header().Add("content-type", "text/plain")
+				res.WriteHeader(http.StatusCreated)
+				res.Write([]byte("http://localhost:8080/" + shortURL))
+			} else {
+				res.WriteHeader(http.StatusBadRequest)
+			}
 		}
 	} else if req.Method == http.MethodGet {
 		urlsParts := strings.Split(req.URL.Path, "/")
@@ -53,16 +60,10 @@ func ShortenerHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func GetShortURL() string {
+func getShortURL() string {
 	shortURL := make([]byte, 5)
-	var uniqueShortURL string
-	for {
-		for i := range shortURL {
-			shortURL[i] = letterBytes[rand.Intn(len(letterBytes))]
-		}
-		uniqueShortURL = string(shortURL)
-		if _, ok := urls[uniqueShortURL]; !ok {
-			return uniqueShortURL
-		}
+	for i := range shortURL {
+		shortURL[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
+	return string(shortURL)
 }

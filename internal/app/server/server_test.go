@@ -13,29 +13,52 @@ import (
 )
 
 func TestShortenerHandler(t *testing.T) {
+	tests := []struct {
+		name               string
+		originalUrl        string
+		expectedStatusPost int
+		expectedStatusGet  int
+		shortURl           string
+	}{
+		{
+			name:               "test#1",
+			originalUrl:        "https://practicum.yandex.ru/",
+			expectedStatusPost: 201,
+			expectedStatusGet:  307,
+		},
+		{
+			name:               "test#2",
+			expectedStatusPost: 400,
+			expectedStatusGet:  400,
+		},
+	}
 	host := "http://localhost:8080/"
-	originalURL := "https://practicum.yandex.ru/"
-	var shortURL string
-	t.Run("test POST", func(t *testing.T) {
-		request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(originalURL)))
-		w := httptest.NewRecorder()
-		ShortenerHandler(w, request)
-		res := w.Result()
-		assert.Equal(t, 201, res.StatusCode)
-		defer res.Body.Close()
-		resBody, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
-		partsURL := strings.Split(string(resBody), "/")
-		shortURL = partsURL[len(partsURL)-1]
-		assert.Equal(t, string(resBody), host+shortURL)
-	})
-	t.Run("test GET", func(t *testing.T) {
-		request := httptest.NewRequest(http.MethodGet, "/"+shortURL, nil)
-		w := httptest.NewRecorder()
-		ShortenerHandler(w, request)
-		res := w.Result()
-		defer res.Body.Close()
-		assert.Equal(t, 307, res.StatusCode)
-		assert.Equal(t, res.Header.Get("Location"), originalURL)
-	})
+	for _, test := range tests {
+		t.Run(test.name+" POST", func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(test.originalUrl)))
+			w := httptest.NewRecorder()
+			ShortenerHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+			assert.Equal(t, test.expectedStatusPost, res.StatusCode)
+			if test.expectedStatusPost == 201 {
+				resBody, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				partsURL := strings.Split(string(resBody), "/")
+				test.shortURl = partsURL[len(partsURL)-1]
+				assert.Equal(t, string(resBody), host+test.shortURl)
+			}
+		})
+		t.Run(test.name+" GET", func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/"+test.shortURl, nil)
+			w := httptest.NewRecorder()
+			ShortenerHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+			assert.Equal(t, test.expectedStatusGet, res.StatusCode)
+			if test.expectedStatusGet == 307 {
+				assert.Equal(t, res.Header.Get("Location"), test.originalUrl)
+			}
+		})
+	}
 }
