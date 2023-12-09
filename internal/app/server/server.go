@@ -13,7 +13,7 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var urls map[string]string = make(map[string]string)
 
-var returnURL string = "http://localhost:8080/"
+var returnURL string = "http://localhost:8080"
 
 func Init(config *config.Config) {
 	mux := initHandlers()
@@ -45,7 +45,7 @@ func ShortHandler(res http.ResponseWriter, req *http.Request) {
 			urls[shortURL] = bodyStr
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusCreated)
-			res.Write([]byte(returnURL + shortURL))
+			res.Write([]byte(returnURL + "/" + shortURL))
 		} else {
 			res.WriteHeader(http.StatusBadRequest)
 		}
