@@ -37,7 +37,7 @@ func TestShortenerHandler(t *testing.T) {
 		t.Run(test.name+" POST", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(test.originalURL)))
 			w := httptest.NewRecorder()
-			ShortenerHandler(w, request)
+			ShortHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			assert.Equal(t, test.expectedStatusPost, res.StatusCode)
@@ -46,18 +46,18 @@ func TestShortenerHandler(t *testing.T) {
 				require.NoError(t, err)
 				partsURL := strings.Split(string(resBody), "/")
 				test.shortURL = partsURL[len(partsURL)-1]
-				assert.Equal(t, string(resBody), host+test.shortURL)
+				assert.Equal(t, host+test.shortURL, string(resBody))
 			}
 		})
 		t.Run(test.name+" GET", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/"+test.shortURL, nil)
 			w := httptest.NewRecorder()
-			ShortenerHandler(w, request)
+			ExpandHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			assert.Equal(t, test.expectedStatusGet, res.StatusCode)
 			if test.expectedStatusGet == 307 {
-				assert.Equal(t, res.Header.Get("Location"), test.originalURL)
+				assert.Equal(t, test.originalURL, res.Header.Get("Location"))
 			}
 		})
 	}

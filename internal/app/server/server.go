@@ -4,7 +4,8 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -19,44 +20,42 @@ func Init() {
 	}
 }
 
-func initHandlers() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", ShortenerHandler)
-	return mux
+func initHandlers() *chi.Mux {
+	r := chi.NewRouter()
+	r.Post("/", ShortHandler)
+	r.Get("/{shorturl}", ExpandHandler)
+	return r
 }
 
-func ShortenerHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodPost {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-		} else {
-			bodyStr := string(body)
-			if bodyStr != "" {
-				shortURL := getShortURL()
-				for _, ok := urls[shortURL]; ok; {
-					shortURL = getShortURL()
-				}
-				urls[shortURL] = bodyStr
-				res.Header().Add("content-type", "text/plain")
-				res.WriteHeader(http.StatusCreated)
-				res.Write([]byte("http://localhost:8080/" + shortURL))
-			} else {
-				res.WriteHeader(http.StatusBadRequest)
-			}
-		}
-	} else if req.Method == http.MethodGet {
-		urlsParts := strings.Split(req.URL.Path, "/")
-		shortURL := urlsParts[len(urlsParts)-1]
-		originalURL, ok := urls[shortURL]
-		if !ok {
-			res.WriteHeader(http.StatusBadRequest)
-		} else {
-			res.Header().Add("Location", originalURL)
-			res.WriteHeader(http.StatusTemporaryRedirect)
-		}
-	} else {
+func ShortHandler(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
+	} else {
+		bodyStr := string(body)
+		if bodyStr != "" {
+			shortURL := getShortURL()
+			for _, ok := urls[shortURL]; ok; {
+				shortURL = getShortURL()
+			}
+			urls[shortURL] = bodyStr
+			res.Header().Add("content-type", "text/plain")
+			res.WriteHeader(http.StatusCreated)
+			res.Write([]byte("http://localhost:8080/" + shortURL))
+		} else {
+			res.WriteHeader(http.StatusBadRequest)
+		}
+	}
+}
+
+func ExpandHandler(res http.ResponseWriter, req *http.Request) {
+	shortURL := req.URL.Path[1:]
+	originalURL, ok := urls[shortURL]
+	if !ok {
+		res.WriteHeader(http.StatusBadRequest)
+	} else {
+		res.Header().Add("Location", originalURL)
+		res.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
 
