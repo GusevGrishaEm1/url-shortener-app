@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/config"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -12,9 +13,12 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var urls map[string]string = make(map[string]string)
 
-func Init() {
+var returnURL string = "http://localhost:8080/"
+
+func Init(config *config.Config) {
 	mux := initHandlers()
-	err := http.ListenAndServe(":8080", mux)
+	returnURL = config.GetBaseReturnURL()
+	err := http.ListenAndServe(config.GetServerURL(), mux)
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +45,7 @@ func ShortHandler(res http.ResponseWriter, req *http.Request) {
 			urls[shortURL] = bodyStr
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusCreated)
-			res.Write([]byte("http://localhost:8080/" + shortURL))
+			res.Write([]byte(returnURL + shortURL))
 		} else {
 			res.WriteHeader(http.StatusBadRequest)
 		}
