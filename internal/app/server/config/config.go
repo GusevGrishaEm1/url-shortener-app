@@ -10,7 +10,7 @@ func (c *Config) SetServerURL(flagValue string) error {
 	return nil
 }
 
-func (c *Config) SetBaseReturnURLURL(flagValue string) error {
+func (c *Config) SetBaseReturnURL(flagValue string) error {
 	c.baseReturnURL = flagValue
 	return nil
 }
@@ -21,4 +21,12 @@ func (c *Config) GetServerURL() string {
 
 func (c *Config) GetBaseReturnURL() string {
 	return c.baseReturnURL
+}
+
+func GetDefault() *Config {
+	config := Config{
+		serverURL:     "localhost:8080",
+		baseReturnURL: "http://localhost:8080",
+	}
+	return &config
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestShortenerHandler(t *testing.T) {
+func TestShortenerHandlers(t *testing.T) {
 	tests := []struct {
 		name               string
 		originalURL        string

@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	config := parseFlags()
-	server.Init(config)
+	server.SetConfig(parseFlags())
+	server.Init()
 }

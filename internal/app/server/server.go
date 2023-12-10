@@ -9,16 +9,14 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 var urls map[string]string = make(map[string]string)
 
-var returnURL string = "http://localhost:8080"
+var serverConfig *config.Config = config.GetDefault()
 
 func Init(config *config.Config) {
+	serverConfig := config
 	mux := initHandlers()
-	returnURL = config.GetBaseReturnURL()
-	err := http.ListenAndServe(config.GetServerURL(), mux)
+	err := http.ListenAndServe(serverConfig.GetServerURL(), mux)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +43,7 @@ func ShortHandler(res http.ResponseWriter, req *http.Request) {
 			urls[shortURL] = bodyStr
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusCreated)
-			res.Write([]byte(returnURL + "/" + shortURL))
+			res.Write([]byte(serverConfig.GetBaseReturnURL() + "/" + shortURL))
 		} else {
 			res.WriteHeader(http.StatusBadRequest)
 		}
@@ -64,6 +62,7 @@ func ExpandHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getShortURL() string {
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	shortURL := make([]byte, 5)
 	for i := range shortURL {
 		shortURL[i] = letterBytes[rand.Intn(len(letterBytes))]
