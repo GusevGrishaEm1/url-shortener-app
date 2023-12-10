@@ -1,4 +1,4 @@
-package envflag
+package main
 
 import (
 	"flag"
@@ -7,7 +7,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 )
 
-func ParseFlagsAndEnv() *config.Config {
+func parseFlagsAndEnv() *config.Config {
 	config := new(config.Config)
 	setFromFlags(config)
 	setFromEnv(config)
