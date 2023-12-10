@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/GusevGrishaEm1/url-shortener-app.git/cmd/shortener/envflag"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
 	"github.com/go-chi/chi/v5"
@@ -33,5 +34,5 @@ func initHandlers() *chi.Mux {
 }
 
 func main() {
-	Init(parseFlagsAndEnv())
+	Init(envflag.ParseFlagsAndEnv())
 }
