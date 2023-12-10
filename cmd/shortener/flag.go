@@ -33,6 +33,10 @@ func setFromFlags(config *config.Config) {
 		flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
 	}
 	flag.Parse()
-	config.SetServerURL(serverURL)
-	config.SetBaseReturnURL(baseReturnURL)
+	if serverURL != "" {
+		config.SetServerURL(serverURL)
+	}
+	if baseReturnURL != "" {
+		config.SetBaseReturnURL(baseReturnURL)
+	}
 }
