@@ -4,10 +4,10 @@ import (
 	"flag"
 	"os"
 
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/config"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 )
 
-func parseFlags() *config.Config {
+func parseFlagsAndEnv() *config.Config {
 	config := new(config.Config)
 	setFromFlags(config)
 	setFromEnv(config)
