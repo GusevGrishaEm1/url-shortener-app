@@ -9,16 +9,16 @@ import (
 
 func parseFlags() *config.Config {
 	config := new(config.Config)
-	setFromEnv(config)
 	setFromFlags(config)
+	setFromEnv(config)
 	return config
 }
 
 func setFromEnv(config *config.Config) {
-	if addr := os.Getenv("SERVER_ADDRESS"); addr != "" {
+	if addr, ok := os.LookupEnv("SERVER_ADDRESS"); ok {
 		config.SetServerURL(addr)
 	}
-	if addr := os.Getenv("BASE_URL"); addr != "" {
+	if addr, ok := os.LookupEnv("BASE_URL"); ok {
 		config.SetBaseReturnURL(addr)
 	}
 }
@@ -26,17 +26,9 @@ func setFromEnv(config *config.Config) {
 func setFromFlags(config *config.Config) {
 	var serverURL string
 	var baseReturnURL string
-	if config.GetServerURL() == "" {
-		flag.StringVar(&serverURL, "a", "localhost:8080", "Net address host:port")
-	}
-	if config.GetBaseReturnURL() == "" {
-		flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
-	}
+	flag.StringVar(&serverURL, "a", "localhost:8080", "Net address host:port")
+	flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
 	flag.Parse()
-	if serverURL != "" {
-		config.SetServerURL(serverURL)
-	}
-	if baseReturnURL != "" {
-		config.SetBaseReturnURL(baseReturnURL)
-	}
+	config.SetServerURL(serverURL)
+	config.SetBaseReturnURL(baseReturnURL)
 }
