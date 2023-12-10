@@ -14,7 +14,7 @@ var urls map[string]string = make(map[string]string)
 var serverConfig *config.Config = config.GetDefault()
 
 func Init(config *config.Config) {
-	serverConfig := config
+	serverConfig = config
 	mux := initHandlers()
 	err := http.ListenAndServe(serverConfig.GetServerURL(), mux)
 	if err != nil {

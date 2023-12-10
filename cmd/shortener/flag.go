@@ -28,7 +28,6 @@ func setFromFlags(config *config.Config) {
 	var baseReturnURL string
 	if config.GetServerURL() == "" {
 		flag.StringVar(&serverURL, "a", "localhost:8080", "Net address host:port")
-
 	}
 	if config.GetBaseReturnURL() == "" {
 		flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
