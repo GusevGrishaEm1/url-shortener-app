@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"bytes"
@@ -9,14 +9,17 @@ import (
 	"testing"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestShortenerHandlers(t *testing.T) {
-	urls = make(map[string]string)
-	serverConfig = config.GetDefault()
+	handler := new(ShortHandlerImpl)
+	handler.Service = &service.ShortenerServiceImpl{
+		Urls: make(map[string]string),
+	}
+	handler.ServerConfig = config.GetDefault()
 	tests := []struct {
 		name               string
 		originalURL        string
@@ -41,7 +44,7 @@ func TestShortenerHandlers(t *testing.T) {
 		t.Run(test.name+" POST", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(test.originalURL)))
 			w := httptest.NewRecorder()
-			handlers.ShortHandler(w, request, urls, serverConfig)
+			handler.ShortHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			assert.Equal(t, test.expectedStatusPost, res.StatusCode)
@@ -56,7 +59,7 @@ func TestShortenerHandlers(t *testing.T) {
 		t.Run(test.name+" GET", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/"+test.shortURL, nil)
 			w := httptest.NewRecorder()
-			handlers.ExpandHandler(w, request, urls)
+			handler.ExpandHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			assert.Equal(t, test.expectedStatusGet, res.StatusCode)
