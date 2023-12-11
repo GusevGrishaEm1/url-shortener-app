@@ -23,7 +23,7 @@ func (handler *ShortHandlerImpl) ShortHandler(res http.ResponseWriter, req *http
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 	} else {
-		shortURL, ok := handler.Service.CreateShortUrl(string(body))
+		shortURL, ok := handler.Service.CreateShortURL(string(body))
 		if ok {
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusCreated)
@@ -35,7 +35,7 @@ func (handler *ShortHandlerImpl) ShortHandler(res http.ResponseWriter, req *http
 }
 
 func (handler *ShortHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
-	originalURL, ok := handler.Service.GetByShortUrl(req.URL.Path[1:])
+	originalURL, ok := handler.Service.GetByShortURL(req.URL.Path[1:])
 	if ok {
 		res.Header().Add("Location", originalURL)
 		res.WriteHeader(http.StatusTemporaryRedirect)

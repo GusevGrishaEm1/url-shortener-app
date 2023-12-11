@@ -3,15 +3,15 @@ package service
 import "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/util"
 
 type ShortenerService interface {
-	CreateShortUrl(originalURL string) (string, bool)
-	GetByShortUrl(shortURL string) (string, bool)
+	CreateShortURL(originalURL string) (string, bool)
+	GetByShortURL(shortURL string) (string, bool)
 }
 
 type ShortenerServiceImpl struct {
 	Urls map[string]string
 }
 
-func (service *ShortenerServiceImpl) CreateShortUrl(originalURL string) (string, bool) {
+func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string, bool) {
 	if originalURL == "" {
 		return "", false
 	} else {
@@ -24,7 +24,7 @@ func (service *ShortenerServiceImpl) CreateShortUrl(originalURL string) (string,
 	}
 }
 
-func (service *ShortenerServiceImpl) GetByShortUrl(shortURL string) (string, bool) {
+func (service *ShortenerServiceImpl) GetByShortURL(shortURL string) (string, bool) {
 	originalURL, ok := service.Urls[shortURL]
 	return originalURL, ok
 }
