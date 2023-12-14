@@ -9,12 +9,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func StartServer(serverConfig *config.Config) {
+func StartServer(serverConfig *config.Config) error {
 	mux := initHandlers(serverConfig)
 	err := http.ListenAndServe(serverConfig.GetServerURL(), mux)
-	if err != nil {
-		panic(err)
-	}
+	return err
 }
 
 func initHandlers(serverConfig *config.Config) *chi.Mux {
