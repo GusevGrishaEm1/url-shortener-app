@@ -5,6 +5,7 @@ import (
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handler"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/go-chi/chi/v5"
 )
@@ -24,7 +25,7 @@ func initHandlers(serverConfig *config.Config) *chi.Mux {
 		ServerConfig: serverConfig,
 	}
 	r := chi.NewRouter()
-	r.Post("/", handler.ShortHandler)
-	r.Get("/{shorturl}", handler.ExpandHandler)
+	r.Post("/", logger.RequestLogger(handler.ShortHandler))
+	r.Get("/{shorturl}", logger.RequestLogger(handler.ExpandHandler))
 	return r
 }
