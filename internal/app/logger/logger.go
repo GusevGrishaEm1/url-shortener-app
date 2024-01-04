@@ -9,39 +9,15 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	Logger = slog.New(&slogzap.ZapHandler{})
-)
+var Logger = slog.New(&slogzap.ZapHandler{})
 
-func Initialize(level slog.Level) error {
+func Init(level slog.Level) error {
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
 		return err
 	}
 	Logger = slog.New(slogzap.Option{Level: level, Logger: zapLogger}.NewZapHandler())
 	return nil
-}
-
-type (
-	responseData struct {
-		status int
-		size   int
-	}
-	loggingResponseWriter struct {
-		http.ResponseWriter
-		responseData *responseData
-	}
-)
-
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size
-	return size, err
-}
-
-func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode
 }
 
 func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
@@ -68,6 +44,28 @@ func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
 					slog.Int("size", responseData.size),
 				),
 			).
-			Info("request/response info")
+			Info("request info")
 	})
+}
+
+type (
+	responseData struct {
+		status int
+		size   int
+	}
+	loggingResponseWriter struct {
+		http.ResponseWriter
+		responseData *responseData
+	}
+)
+
+func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b)
+	r.responseData.size += size
+	return size, err
+}
+
+func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode)
+	r.responseData.status = statusCode
 }
