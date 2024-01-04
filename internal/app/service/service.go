@@ -13,7 +13,13 @@ type ShortenerService interface {
 
 type ShortenerServiceImpl struct {
 	mu   sync.Mutex
-	Urls map[string]string
+	urls map[string]string
+}
+
+func New() ShortenerService {
+	return &ShortenerServiceImpl{
+		urls: make(map[string]string),
+	}
 }
 
 func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string, bool) {
@@ -23,16 +29,16 @@ func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string,
 		return "", false
 	}
 	shortURL := util.GetShortURL()
-	for _, ok := service.Urls[shortURL]; ok; {
+	for _, ok := service.urls[shortURL]; ok; {
 		shortURL = util.GetShortURL()
 	}
-	service.Urls[shortURL] = originalURL
+	service.urls[shortURL] = originalURL
 	return shortURL, true
 }
 
 func (service *ShortenerServiceImpl) GetByShortURL(shortURL string) (string, bool) {
 	service.mu.Lock()
 	defer service.mu.Unlock()
-	originalURL, ok := service.Urls[shortURL]
+	originalURL, ok := service.urls[shortURL]
 	return originalURL, ok
 }
