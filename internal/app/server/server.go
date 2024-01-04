@@ -20,6 +20,6 @@ func initHandlers(serverConfig *config.Config) *chi.Mux {
 	r := chi.NewRouter()
 	r.Post("/", logger.RequestLogger(handlers.ShortenHandler))
 	r.Get("/{shorturl}", logger.RequestLogger(handlers.ExpandHandler))
-	r.Post("/shorten", logger.RequestLogger(handlers.ShortenJSONHandler))
+	r.Post("/api/shorten", logger.RequestLogger(handlers.ShortenJSONHandler))
 	return r
 }

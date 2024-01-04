@@ -134,7 +134,7 @@ func TestShortenJSONHandler(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewReader(test.reqBody))
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(test.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
 			handlers.ShortenJSONHandler(w, request)
