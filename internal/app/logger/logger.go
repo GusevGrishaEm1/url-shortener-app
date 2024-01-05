@@ -28,8 +28,8 @@ func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
 			size:   0,
 		}
 		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
+			rw:           w,
+			responseData: responseData,
 		}
 		h(&lw, r)
 		Logger.
@@ -54,18 +54,22 @@ type (
 		size   int
 	}
 	loggingResponseWriter struct {
-		http.ResponseWriter
+		rw           http.ResponseWriter
 		responseData *responseData
 	}
 )
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b)
+	size, err := r.rw.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	r.ResponseWriter.WriteHeader(statusCode)
+	r.rw.WriteHeader(statusCode)
 	r.responseData.status = statusCode
+}
+
+func (r *loggingResponseWriter) Header() http.Header {
+	return r.rw.Header()
 }

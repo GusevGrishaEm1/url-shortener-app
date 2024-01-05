@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/stretchr/testify/assert"
@@ -80,8 +83,8 @@ func TestExpandHandler(t *testing.T) {
 		handlers.ExpandHandler(w, request)
 		res := w.Result()
 		defer res.Body.Close()
-		equals := assert.Equal(t, test.expectedStatus, res.StatusCode)
-		if equals && test.expectedStatus == 307 {
+		statusValid := assert.Equal(t, test.expectedStatus, res.StatusCode)
+		if statusValid && test.expectedStatus == 307 {
 			assert.Equal(t, originalURL, res.Header.Get("Location"))
 		}
 	}
@@ -140,68 +143,82 @@ func TestShortenJSONHandler(t *testing.T) {
 			handlers.ShortenJSONHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
-			equals := assert.Equal(t, test.expectedStatus, res.StatusCode)
-			if equals && test.expectedStatus == 201 {
-				var err error
-				resBody, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-				jsonMap := make(map[string]json.RawMessage)
-				err = json.Unmarshal(resBody, &jsonMap)
-				require.NoError(t, err)
-				assert.Equal(t, fmt.Sprintf(test.expectedResBody, string(jsonMap["result"]))+"\n", string(resBody))
+			statusValid := assert.Equal(t, test.expectedStatus, res.StatusCode)
+			if statusValid && test.expectedStatus == http.StatusCreated {
+				resBody, jsonMap := readJSON(res, t)
+				test.expectedResBody = fmt.Sprintf(test.expectedResBody, string(jsonMap["result"]))
+				assert.JSONEq(t, test.expectedResBody, string(resBody))
 			}
 		})
 	}
 }
 
-// func TestShortenerHandlers(t *testing.T) {
-// 	handlers := New(config.GetDefault())
-// 	tests := []struct {
-// 		name               string
-// 		originalURL        string
-// 		expectedStatusPost int
-// 		expectedStatusGet  int
-// 		shortURL           string
-// 	}{
-// 		{
-// 			name:               "test#1",
-// 			originalURL:        "https://practicum.yandex.ru/",
-// 			expectedStatusPost: 201,
-// 			expectedStatusGet:  307,
-// 		},
-// 		{
-// 			name:               "test#2",
-// 			expectedStatusPost: 400,
-// 			expectedStatusGet:  400,
-// 		},
-// 	}
-// 	host := "http://localhost:8080/"
-// 	for _, test := range tests {
-// 		t.Run(test.name+" POST", func(t *testing.T) {
-// 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(test.originalURL)))
-// 			w := httptest.NewRecorder()
-// 			handlers.ShortenHandler(w, request)
-// 			res := w.Result()
-// 			defer res.Body.Close()
-// 			assert.Equal(t, test.expectedStatusPost, res.StatusCode)
-// 			if test.expectedStatusPost == 201 {
-// 				resBody, err := io.ReadAll(res.Body)
-// 				require.NoError(t, err)
-// 				partsURL := strings.Split(string(resBody), "/")
-// 				test.shortURL = partsURL[len(partsURL)-1]
-// 				assert.Equal(t, host+test.shortURL, string(resBody))
-// 			}
-// 		})
-// 		t.Run(test.name+" GET", func(t *testing.T) {
-// 			request := httptest.NewRequest(http.MethodGet, "/"+test.shortURL, nil)
-// 			w := httptest.NewRecorder()
-// 			handlers.ExpandHandler(w, request)
-// 			res := w.Result()
-// 			defer res.Body.Close()
-// 			assert.Equal(t, test.expectedStatusGet, res.StatusCode)
-// 			if test.expectedStatusGet == 307 {
-// 				assert.Equal(t, test.originalURL, res.Header.Get("Location"))
-// 			}
-// 		})
-// 	}
-// }
+func TestGzipCompression(t *testing.T) {
+	handlers := New(config.GetDefault())
+	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
+	reqBody := `{"url":"https://practicum.yandex.ru/"}`
+	expectedResBody := `{"result":%s}`
+	t.Run("gzip_send", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		_, err := zb.Write([]byte(reqBody))
+		require.NoError(t, err)
+		err = zb.Close()
+		require.NoError(t, err)
+		r := httptest.NewRequest("POST", "/api/shorten", buf)
+		r.Header.Set("Content-Encoding", "gzip")
+		w := httptest.NewRecorder()
+		handler(w, r)
+		res := w.Result()
+		defer res.Body.Close()
+		statusValid := assert.Equal(t, http.StatusCreated, res.StatusCode)
+		if statusValid {
+			resBody, jsonMap := readJSON(res, t)
+			expectedResBody = fmt.Sprintf(expectedResBody, string(jsonMap["result"]))
+			assert.JSONEq(t, expectedResBody, string(resBody))
+		}
+	})
+}
+
+func readJSON(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMessage) {
+	var err error
+	resBody, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	jsonMap := make(map[string]json.RawMessage)
+	err = json.Unmarshal(resBody, &jsonMap)
+	require.NoError(t, err)
+	return resBody, jsonMap
+}
+
+func TestGzipDecompression(t *testing.T) {
+	handlers := New(config.GetDefault())
+	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
+	reqBody := `{"url":"https://practicum.yandex.ru/"}`
+	expectedResBody := `{"result":%s}`
+	t.Run("gzip_recive", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader([]byte(reqBody)))
+		r.Header.Set("Accept-Encoding", "gzip")
+		w := httptest.NewRecorder()
+		handler(w, r)
+		res := w.Result()
+		defer res.Body.Close()
+		statusValid := assert.Equal(t, http.StatusCreated, res.StatusCode)
+		if statusValid {
+			resBody, jsonMap := readJSONGzip(res, t)
+			expectedResBody = fmt.Sprintf(expectedResBody, string(jsonMap["result"]))
+			assert.JSONEq(t, expectedResBody, string(resBody))
+		}
+	})
+}
+
+func readJSONGzip(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMessage) {
+	var err error
+	gzipResBody, err := gzip.NewReader(res.Body)
+	require.NoError(t, err)
+	resBody, err := io.ReadAll(gzipResBody)
+	require.NoError(t, err)
+	jsonMap := make(map[string]json.RawMessage)
+	err = json.Unmarshal(resBody, &jsonMap)
+	require.NoError(t, err)
+	return resBody, jsonMap
+}
