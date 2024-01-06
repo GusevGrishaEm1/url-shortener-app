@@ -57,17 +57,23 @@ func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string,
 		shortURL = util.GetShortURL()
 	}
 	service.urls[shortURL] = originalURL
-	uuid := service.uuidSeq
+	err := saveToStorage(service, service.uuidSeq, shortURL, originalURL)
+	if err != nil {
+		return "", false
+	}
+	return shortURL, true
+}
+
+func saveToStorage(service *ShortenerServiceImpl, uuid int, shortURL string, originalURL string) error {
 	err := service.storage.SaveToStorage(models.StorageURLInfo{
 		UUID:        uuid,
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	})
-	if err != nil {
-		return "", false
+	if err == nil {
+		service.uuidSeq++
 	}
-	service.uuidSeq++
-	return shortURL, true
+	return err
 }
 
 func (service *ShortenerServiceImpl) GetByShortURL(shortURL string) (string, bool) {
