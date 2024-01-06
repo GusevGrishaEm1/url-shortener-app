@@ -1,9 +1,19 @@
 package main
 
-import "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server"
+import (
+	"log/slog"
+
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server"
+)
 
 func main() {
-	err := server.StartServer(parseFlagsAndEnv())
+	var err error
+	err = logger.Init(slog.LevelInfo)
+	if err != nil {
+		panic(err)
+	}
+	err = server.StartServer(parseFlagsAndEnv())
 	if err != nil {
 		panic(err)
 	}

@@ -4,27 +4,23 @@ import (
 	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handler"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
+	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/go-chi/chi/v5"
 )
 
 func StartServer(serverConfig *config.Config) error {
 	mux := initHandlers(serverConfig)
-	err := http.ListenAndServe(serverConfig.GetServerURL(), mux)
+	err := http.ListenAndServe(serverConfig.ServerURL, mux)
 	return err
 }
 
 func initHandlers(serverConfig *config.Config) *chi.Mux {
-	service := service.ShortenerServiceImpl{
-		Urls: make(map[string]string),
-	}
-	handler := handler.ShortHandlerImpl{
-		Service:      &service,
-		ServerConfig: serverConfig,
-	}
+	handlers := handlers.New(serverConfig)
 	r := chi.NewRouter()
-	r.Post("/", handler.ShortHandler)
-	r.Get("/{shorturl}", handler.ExpandHandler)
+	r.Post("/", gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenHandler)))
+	r.Get("/{shorturl}", gzipreq.RequestZipper(logger.RequestLogger(handlers.ExpandHandler)))
+	r.Post("/api/shorten", gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenJSONHandler)))
 	return r
 }
