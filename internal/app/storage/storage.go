@@ -34,7 +34,7 @@ type URLStorageFileImpl struct {
 
 func (storage *URLStorageFileImpl) LoadFromStorage() []models.StorageURLInfo {
 	var storageInfo models.StorageURLInfo
-	var array []models.StorageURLInfo = make([]models.StorageURLInfo, 0)
+	array := make([]models.StorageURLInfo, 0)
 	for err := storage.decoder.Decode(&storageInfo); err == nil; err = storage.decoder.Decode(&storageInfo) {
 		array = append(array, storageInfo)
 	}
