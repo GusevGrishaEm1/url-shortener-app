@@ -23,7 +23,7 @@ type ShortenerHandlerImpl struct {
 
 func New(config *config.Config) ShortenerHandler {
 	return &ShortenerHandlerImpl{
-		service:      service.New(),
+		service:      service.New(config),
 		serverConfig: config,
 	}
 }
@@ -41,7 +41,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	}
 	res.Header().Add("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(handler.serverConfig.GetBaseReturnURL() + "/" + shortURL))
+	res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + shortURL))
 }
 
 func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
@@ -51,15 +51,13 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	shortURL, ok := handler.service.CreateShortURL(reqModel.URL)
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	resModel := models.Response{
-		Result: handler.serverConfig.GetBaseReturnURL() + "/" + shortURL,
+		Result: handler.serverConfig.BaseReturnURL + "/" + shortURL,
 	}
 	res.Header().Add("content-type", "application/json")
 	res.WriteHeader(http.StatusCreated)

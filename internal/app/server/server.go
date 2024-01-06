@@ -12,7 +12,7 @@ import (
 
 func StartServer(serverConfig *config.Config) error {
 	mux := initHandlers(serverConfig)
-	err := http.ListenAndServe(serverConfig.GetServerURL(), mux)
+	err := http.ListenAndServe(serverConfig.ServerURL, mux)
 	return err
 }
 

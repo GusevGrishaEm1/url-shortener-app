@@ -50,7 +50,7 @@ func TestShortenHandler(t *testing.T) {
 				require.NoError(t, err)
 				partsURL := strings.Split(string(resBody), "/")
 				shortURL := partsURL[len(partsURL)-1]
-				assert.Equal(t, config.GetBaseReturnURL()+"/"+shortURL, string(resBody))
+				assert.Equal(t, config.BaseReturnURL+"/"+shortURL, string(resBody))
 			}
 		})
 	}
