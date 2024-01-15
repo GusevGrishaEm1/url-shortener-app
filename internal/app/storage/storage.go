@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 )
 
@@ -17,12 +18,10 @@ func NewFileStorage(fileStoragePath string) (URLStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	enc := json.NewEncoder(file)
-	dec := json.NewDecoder(file)
 	return &URLStorageFileImpl{
 		file:    file,
-		encoder: enc,
-		decoder: dec,
+		encoder: json.NewEncoder(file),
+		decoder: json.NewDecoder(file),
 	}, err
 }
 
@@ -35,13 +34,20 @@ type URLStorageFileImpl struct {
 func (storage *URLStorageFileImpl) LoadFromStorage() []models.StorageURLInfo {
 	var storageInfo models.StorageURLInfo
 	array := make([]models.StorageURLInfo, 0)
-	for err := storage.decoder.Decode(&storageInfo); err == nil; err = storage.decoder.Decode(&storageInfo) {
+	err := storage.decoder.Decode(&storageInfo)
+	if err != nil {
+		logger.Logger.Warn(err.Error())
+	}
+	for err == nil {
 		array = append(array, storageInfo)
+		err = storage.decoder.Decode(&storageInfo)
+		if err != nil {
+			logger.Logger.Warn(err.Error())
+		}
 	}
 	return array
 }
 
 func (storage *URLStorageFileImpl) SaveToStorage(info models.StorageURLInfo) error {
-	err := storage.encoder.Encode(info)
-	return err
+	return storage.encoder.Encode(info)
 }
