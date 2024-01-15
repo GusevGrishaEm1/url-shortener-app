@@ -57,9 +57,11 @@ func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string,
 		shortURL = util.GetShortURL()
 	}
 	service.urls[shortURL] = originalURL
-	err := saveToStorage(service, service.uuidSeq, shortURL, originalURL)
-	if err != nil {
-		return "", false
+	if service.storage != nil {
+		err := saveToStorage(service, service.uuidSeq, shortURL, originalURL)
+		if err != nil {
+			return "", false
+		}
 	}
 	return shortURL, true
 }
