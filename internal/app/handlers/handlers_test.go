@@ -23,7 +23,8 @@ import (
 func TestShortenHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault())
+	config := config.GetDefault()
+	handlers := New(config)
 	tests := []struct {
 		name           string
 		url            string
