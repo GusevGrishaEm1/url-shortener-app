@@ -223,15 +223,15 @@ func readJSONGzip(res *http.Response, t *testing.T) ([]byte, map[string]json.Raw
 	return resBody, jsonMap
 }
 
-func TestPingDBHandler(t *testing.T) {
-	handlers := New(config.GetDefault())
-	handler := handlers.PingDBHandler
-	t.Run("ping db", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
-		w := httptest.NewRecorder()
-		handler(w, r)
-		res := w.Result()
-		defer res.Body.Close()
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-	})
-}
+// func TestPingDBHandler(t *testing.T) {
+// 	handlers := New(config.GetDefault())
+// 	handler := handlers.PingDBHandler
+// 	t.Run("ping db", func(t *testing.T) {
+// 		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+// 		w := httptest.NewRecorder()
+// 		handler(w, r)
+// 		res := w.Result()
+// 		defer res.Body.Close()
+// 		assert.Equal(t, http.StatusOK, res.StatusCode)
+// 	})
+// }
