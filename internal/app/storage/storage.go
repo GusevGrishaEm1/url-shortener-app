@@ -31,14 +31,14 @@ type URLStorageFileImpl struct {
 }
 
 func (storage *URLStorageFileImpl) LoadFromStorage() []models.URLInfo {
-	var storageInfo models.URLInfo
+	var storageInfo *models.URLInfo
 	array := make([]models.URLInfo, 0)
 	err := storage.decoder.Decode(&storageInfo)
 	if err != nil {
 		logger.Logger.Warn(err.Error())
 	}
 	for err == nil {
-		array = append(array, storageInfo)
+		array = append(array, *storageInfo)
 		err = storage.decoder.Decode(&storageInfo)
 		if err != nil {
 			logger.Logger.Warn(err.Error())
