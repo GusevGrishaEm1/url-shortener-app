@@ -17,7 +17,6 @@ func New(fileStoragePath string) (URLStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 	return &URLStorageFileImpl{
 		file:    file,
 		encoder: json.NewEncoder(file),
@@ -45,5 +44,6 @@ func (storage *URLStorageFileImpl) LoadFromStorage() []models.URLInfo {
 			logger.Logger.Warn(err.Error())
 		}
 	}
+	storage.file.Close()
 	return array
 }
