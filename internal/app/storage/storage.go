@@ -14,7 +14,7 @@ type URLStorage interface {
 }
 
 func New(fileStoragePath string) (URLStorage, error) {
-	file, err := os.OpenFile(fileStoragePath, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile(fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}
