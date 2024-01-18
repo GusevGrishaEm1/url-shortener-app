@@ -10,6 +10,7 @@ import (
 
 type URLStorage interface {
 	LoadFromStorage() []models.URLInfo
+	SaveToStorage(models.URLInfo) error
 }
 
 func New(fileStoragePath string) (URLStorage, error) {
@@ -46,4 +47,8 @@ func (storage *URLStorageFileImpl) LoadFromStorage() []models.URLInfo {
 	}
 	defer storage.file.Close()
 	return array
+}
+
+func (storage *URLStorageFileImpl) SaveToStorage(info models.URLInfo) error {
+	return storage.encoder.Encode(info)
 }
