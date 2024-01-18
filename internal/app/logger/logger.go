@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -37,11 +38,11 @@ func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
 				slog.Group("request",
 					slog.String("uri", r.RequestURI),
 					slog.String("method", r.Method),
-					slog.Duration("duration", time.Since(start)),
+					slog.String("duration", fmt.Sprint(time.Since(start).Nanoseconds())+"nanos"),
 				),
 				slog.Group("response",
-					slog.Int("status", responseData.status),
-					slog.Int("size", responseData.size),
+					slog.Int("status", lw.responseData.status),
+					slog.Int("size", lw.responseData.size),
 				),
 			).
 			Info("request info")
