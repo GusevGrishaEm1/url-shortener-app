@@ -17,17 +17,19 @@ type ShortenerService interface {
 }
 
 type ShortenerServiceImpl struct {
-	config *config.Config
-	mu     sync.Mutex
-	urls   map[string]string
+	config  *config.Config
+	mu      sync.Mutex
+	urls    map[string]string
+	storage storage.URLStorage
 }
 
 func New(config *config.Config) ShortenerService {
 	storage, err := storage.New(config.FileStoragePath)
 	urls := initUrlsFromStorage(storage, err == nil)
 	return &ShortenerServiceImpl{
-		urls:   urls,
-		config: config,
+		urls:    urls,
+		config:  config,
+		storage: storage,
 	}
 }
 
