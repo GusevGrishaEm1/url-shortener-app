@@ -40,7 +40,7 @@ func setFromFlags(config *config.Config) {
 	flag.StringVar(&serverURL, "a", "localhost:8080", "Net address host:port")
 	flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
 	flag.StringVar(&fileStoragePath, "f", "/tmp/short-url-db.json", "File storage path")
-	flag.StringVar(&databaseURL, "f", "postgres://grisha:grisha_db@localhost:5432/urls", "Database URL")
+	flag.StringVar(&databaseURL, "d", "postgres://grisha:grisha_db@localhost:5432/urls", "Database URL")
 	flag.Parse()
 	config.ServerURL = serverURL
 	config.BaseReturnURL = baseReturnURL
