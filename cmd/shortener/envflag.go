@@ -24,9 +24,6 @@ func setFromEnv(config *config.Config) {
 	if path, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
 		config.FileStoragePath = path
 	}
-	if path, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
-		config.FileStoragePath = path
-	}
 	if url, ok := os.LookupEnv("DATABASE_DSN"); ok {
 		config.DatabaseURL = url
 	}
