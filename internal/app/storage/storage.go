@@ -45,7 +45,6 @@ func (storage *URLStorageFileImpl) LoadFromStorage() []models.URLInfo {
 			logger.Logger.Warn(err.Error())
 		}
 	}
-	defer storage.file.Close()
 	return array
 }
 
