@@ -19,8 +19,7 @@ import (
 )
 
 func TestShortenHandler(t *testing.T) {
-	config := config.GetDefault()
-	handlers := New(config)
+	handlers := New(config.GetDefault())
 	tests := []struct {
 		name           string
 		url            string
@@ -57,8 +56,7 @@ func TestShortenHandler(t *testing.T) {
 }
 
 func TestExpandHandler(t *testing.T) {
-	config := config.GetDefault()
-	handlers := New(config)
+	handlers := New(config.GetDefault())
 	originalURL := "https://gophercises.com/#signup"
 	savedShortURL := initShortURLSForExpandHandler(handlers, originalURL)
 	tests := []struct {
@@ -105,8 +103,7 @@ func initShortURLSForExpandHandler(handlers ShortenerHandler, originalURL string
 }
 
 func TestShortenJSONHandler(t *testing.T) {
-	config := config.GetDefault()
-	handlers := New(config)
+	handlers := New(config.GetDefault())
 	tests := []struct {
 		name            string
 		reqBody         []byte
