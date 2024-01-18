@@ -17,6 +17,7 @@ func New(fileStoragePath string) (URLStorage, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	return &URLStorageFileImpl{
 		file:    file,
 		encoder: json.NewEncoder(file),
