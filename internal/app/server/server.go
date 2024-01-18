@@ -22,5 +22,6 @@ func initHandlers(serverConfig *config.Config) *chi.Mux {
 	r.Post("/", gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenHandler)))
 	r.Get("/{shorturl}", gzipreq.RequestZipper(logger.RequestLogger(handlers.ExpandHandler)))
 	r.Post("/api/shorten", gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenJSONHandler)))
+	r.Post("/ping", gzipreq.RequestZipper(logger.RequestLogger(handlers.PingDBHandler)))
 	return r
 }

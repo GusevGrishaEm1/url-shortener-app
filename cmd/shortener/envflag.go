@@ -24,17 +24,26 @@ func setFromEnv(config *config.Config) {
 	if path, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
 		config.FileStoragePath = path
 	}
+	if path, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
+		config.FileStoragePath = path
+	}
+	if url, ok := os.LookupEnv("DATABASE_DSN"); ok {
+		config.DatabaseURL = url
+	}
 }
 
 func setFromFlags(config *config.Config) {
 	var serverURL string
 	var baseReturnURL string
 	var fileStoragePath string
+	var databaseURL string
 	flag.StringVar(&serverURL, "a", "localhost:8080", "Net address host:port")
 	flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
 	flag.StringVar(&fileStoragePath, "f", "/tmp/short-url-db.json", "File storage path")
+	flag.StringVar(&databaseURL, "f", "postgres://grisha:grisha_db@localhost:5432/urls", "Database URL")
 	flag.Parse()
 	config.ServerURL = serverURL
 	config.BaseReturnURL = baseReturnURL
 	config.FileStoragePath = fileStoragePath
+	config.DatabaseURL = databaseURL
 }

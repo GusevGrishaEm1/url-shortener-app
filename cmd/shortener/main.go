@@ -13,7 +13,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = server.StartServer(parseFlagsAndEnv())
+	config := parseFlagsAndEnv()
+	err = server.StartServer(config)
 	if err != nil {
 		panic(err)
 	}

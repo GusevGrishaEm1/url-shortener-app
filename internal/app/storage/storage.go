@@ -9,11 +9,10 @@ import (
 )
 
 type URLStorage interface {
-	LoadFromStorage() []models.StorageURLInfo
-	SaveToStorage(models.StorageURLInfo) error
+	LoadFromStorage() []models.URLInfo
 }
 
-func NewFileStorage(fileStoragePath string) (URLStorage, error) {
+func New(fileStoragePath string) (URLStorage, error) {
 	file, err := os.OpenFile(fileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
@@ -31,9 +30,9 @@ type URLStorageFileImpl struct {
 	decoder *json.Decoder
 }
 
-func (storage *URLStorageFileImpl) LoadFromStorage() []models.StorageURLInfo {
-	var storageInfo models.StorageURLInfo
-	array := make([]models.StorageURLInfo, 0)
+func (storage *URLStorageFileImpl) LoadFromStorage() []models.URLInfo {
+	var storageInfo models.URLInfo
+	array := make([]models.URLInfo, 0)
 	err := storage.decoder.Decode(&storageInfo)
 	if err != nil {
 		logger.Logger.Warn(err.Error())
@@ -46,8 +45,4 @@ func (storage *URLStorageFileImpl) LoadFromStorage() []models.StorageURLInfo {
 		}
 	}
 	return array
-}
-
-func (storage *URLStorageFileImpl) SaveToStorage(info models.StorageURLInfo) error {
-	return storage.encoder.Encode(info)
 }

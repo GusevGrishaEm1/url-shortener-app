@@ -6,14 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/stretchr/testify/assert"
@@ -21,8 +19,6 @@ import (
 )
 
 func TestShortenHandler(t *testing.T) {
-	err := logger.Init(slog.LevelInfo)
-	require.NoError(t, err)
 	config := config.GetDefault()
 	handlers := New(config)
 	tests := []struct {
@@ -61,8 +57,6 @@ func TestShortenHandler(t *testing.T) {
 }
 
 func TestExpandHandler(t *testing.T) {
-	err := logger.Init(slog.LevelInfo)
-	require.NoError(t, err)
 	config := config.GetDefault()
 	handlers := New(config)
 	originalURL := "https://gophercises.com/#signup"
@@ -111,8 +105,6 @@ func initShortURLSForExpandHandler(handlers ShortenerHandler, originalURL string
 }
 
 func TestShortenJSONHandler(t *testing.T) {
-	err := logger.Init(slog.LevelInfo)
-	require.NoError(t, err)
 	config := config.GetDefault()
 	handlers := New(config)
 	tests := []struct {
@@ -162,8 +154,6 @@ func TestShortenJSONHandler(t *testing.T) {
 }
 
 func TestGzipCompression(t *testing.T) {
-	err := logger.Init(slog.LevelInfo)
-	require.NoError(t, err)
 	handlers := New(config.GetDefault())
 	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
@@ -201,8 +191,6 @@ func readJSON(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMess
 }
 
 func TestGzipDecompression(t *testing.T) {
-	err := logger.Init(slog.LevelInfo)
-	require.NoError(t, err)
 	handlers := New(config.GetDefault())
 	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
@@ -233,4 +221,17 @@ func readJSONGzip(res *http.Response, t *testing.T) ([]byte, map[string]json.Raw
 	err = json.Unmarshal(resBody, &jsonMap)
 	require.NoError(t, err)
 	return resBody, jsonMap
+}
+
+func TestPingDBHandler(t *testing.T) {
+	handlers := New(config.GetDefault())
+	handler := handlers.PingDBHandler
+	t.Run("ping db", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		w := httptest.NewRecorder()
+		handler(w, r)
+		res := w.Result()
+		defer res.Body.Close()
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+	})
 }

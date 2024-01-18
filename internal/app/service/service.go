@@ -1,49 +1,45 @@
 package service
 
 import (
+	"context"
 	"sync"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/util"
+	"github.com/jackc/pgx/v5"
 )
 
 type ShortenerService interface {
 	CreateShortURL(originalURL string) (string, bool)
 	GetByShortURL(shortURL string) (string, bool)
+	PingDB() bool
 }
 
 type ShortenerServiceImpl struct {
-	mu      sync.Mutex
-	urls    map[string]string
-	storage storage.URLStorage
-	uuidSeq int
+	config *config.Config
+	mu     sync.Mutex
+	urls   map[string]string
 }
 
 func New(config *config.Config) ShortenerService {
-	storage, err := storage.NewFileStorage(config.FileStoragePath)
-	urls, uuidSeq := initUrlsFromStorage(storage, err == nil)
+	storage, err := storage.New(config.FileStoragePath)
+	urls := initUrlsFromStorage(storage, err == nil)
 	return &ShortenerServiceImpl{
-		storage: storage,
-		urls:    urls,
-		uuidSeq: uuidSeq,
+		urls:   urls,
+		config: config,
 	}
 }
 
-func initUrlsFromStorage(storage storage.URLStorage, isFileOpen bool) (map[string]string, int) {
-	uuidSeq := 1
+func initUrlsFromStorage(storage storage.URLStorage, isFileOpen bool) map[string]string {
 	urls := make(map[string]string)
 	if isFileOpen {
-		array := storage.LoadFromStorage()
-		for _, el := range array {
-			if uuidSeq <= el.UUID {
-				uuidSeq = el.UUID + 1
-			}
+		urlsFromFile := storage.LoadFromStorage()
+		for _, el := range urlsFromFile {
 			urls[el.ShortURL] = el.OriginalURL
 		}
 	}
-	return urls, uuidSeq
+	return urls
 }
 
 func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string, bool) {
@@ -57,25 +53,7 @@ func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string,
 		shortURL = util.GetShortURL()
 	}
 	service.urls[shortURL] = originalURL
-	if service.storage != nil {
-		err := saveToStorage(service, service.uuidSeq, shortURL, originalURL)
-		if err != nil {
-			return "", false
-		}
-	}
 	return shortURL, true
-}
-
-func saveToStorage(service *ShortenerServiceImpl, uuid int, shortURL string, originalURL string) error {
-	err := service.storage.SaveToStorage(models.StorageURLInfo{
-		UUID:        uuid,
-		ShortURL:    shortURL,
-		OriginalURL: originalURL,
-	})
-	if err == nil {
-		service.uuidSeq++
-	}
-	return err
 }
 
 func (service *ShortenerServiceImpl) GetByShortURL(shortURL string) (string, bool) {
@@ -83,4 +61,13 @@ func (service *ShortenerServiceImpl) GetByShortURL(shortURL string) (string, boo
 	defer service.mu.Unlock()
 	originalURL, ok := service.urls[shortURL]
 	return originalURL, ok
+}
+
+func (service *ShortenerServiceImpl) PingDB() bool {
+	conn, err := pgx.Connect(context.Background(), service.config.DatabaseURL)
+	if err != nil {
+		return false
+	}
+	defer conn.Close(context.Background())
+	return conn.Ping(context.Background()) == nil
 }

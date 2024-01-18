@@ -14,6 +14,7 @@ type ShortenerHandler interface {
 	ShortenHandler(res http.ResponseWriter, req *http.Request)
 	ShortenJSONHandler(res http.ResponseWriter, req *http.Request)
 	ExpandHandler(res http.ResponseWriter, req *http.Request)
+	PingDBHandler(res http.ResponseWriter, req *http.Request)
 }
 
 type ShortenerHandlerImpl struct {
@@ -76,4 +77,13 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 	}
 	res.Header().Add("Location", originalURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (handler *ShortenerHandlerImpl) PingDBHandler(res http.ResponseWriter, req *http.Request) {
+	ok := handler.service.PingDB()
+	if !ok {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
 }
