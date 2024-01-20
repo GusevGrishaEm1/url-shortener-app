@@ -28,14 +28,8 @@ func New(config *config.Config) (URLRepository, error) {
 			databaseURL: config.DatabaseURL,
 		}, err
 	} else if config.FileStoragePath != "" {
-		file, err := os.OpenFile(config.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			return nil, err
-		}
 		repo := &URLRepositoryFile{
-			file:    file,
-			encoder: json.NewEncoder(file),
-			decoder: json.NewDecoder(file),
+			filePath: config.FileStoragePath,
 		}
 		repo.uuidSeq = getUUIDSeqFromFile(repo)
 		return repo, nil
@@ -71,10 +65,8 @@ func (r *URLRepositoryInMemory) PingDB() bool {
 }
 
 type URLRepositoryFile struct {
-	file    *os.File
-	encoder *json.Encoder
-	decoder *json.Decoder
-	uuidSeq int
+	filePath string
+	uuidSeq  int
 }
 
 func getUUIDSeqFromFile(repo *URLRepositoryFile) int {
@@ -91,13 +83,18 @@ func getUUIDSeqFromFile(repo *URLRepositoryFile) int {
 func loadFromFile(repo *URLRepositoryFile) []models.URLInfo {
 	var storageInfo models.URLInfo
 	array := make([]models.URLInfo, 0)
-	err := repo.decoder.Decode(&storageInfo)
+	file, err := os.OpenFile(repo.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return array
+	}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&storageInfo)
 	if err != nil {
 		logger.Logger.Warn(err.Error())
 	}
 	for err == nil {
 		array = append(array, storageInfo)
-		err = repo.decoder.Decode(&storageInfo)
+		err = decoder.Decode(&storageInfo)
 		if err != nil {
 			logger.Logger.Warn(err.Error())
 		}
@@ -106,14 +103,24 @@ func loadFromFile(repo *URLRepositoryFile) []models.URLInfo {
 }
 
 func (r *URLRepositoryFile) Save(url models.URLInfo) error {
+	file, err := os.OpenFile(r.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(file)
 	url.UUID = r.uuidSeq
 	r.uuidSeq++
-	return r.encoder.Encode(url)
+	return encoder.Encode(url)
 }
 
 func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, error) {
+	file, err := os.OpenFile(r.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(file)
 	var url models.URLInfo
-	err := r.decoder.Decode(&url)
+	err = decoder.Decode(&url)
 	if url.ShortURL == shortURL {
 		return &url, nil
 	}
@@ -125,7 +132,7 @@ func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, er
 		return nil, err
 	}
 	for err == nil {
-		err = r.decoder.Decode(&url)
+		err = decoder.Decode(&url)
 		if url.ShortURL == shortURL {
 			return &url, nil
 		}
