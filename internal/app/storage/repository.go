@@ -114,6 +114,9 @@ func (r *URLRepositoryFile) Save(url models.URLInfo) error {
 func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, error) {
 	var url models.URLInfo
 	err := r.decoder.Decode(&url)
+	if url.ShortURL == shortURL {
+		return &url, nil
+	}
 	if err != nil {
 		logger.Logger.Warn(err.Error())
 		if errors.Is(err, io.EOF) {
@@ -121,20 +124,17 @@ func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, er
 		}
 		return nil, err
 	}
-	if url.ShortURL == shortURL {
-		return &url, nil
-	}
 	for err == nil {
 		err = r.decoder.Decode(&url)
+		if url.ShortURL == shortURL {
+			return &url, nil
+		}
 		if err != nil {
 			logger.Logger.Warn(err.Error())
 			if errors.Is(err, io.EOF) {
 				return nil, ErrOriginalURLNotFound
 			}
 			return nil, err
-		}
-		if url.ShortURL == shortURL {
-			return &url, nil
 		}
 	}
 	return nil, ErrOriginalURLNotFound
