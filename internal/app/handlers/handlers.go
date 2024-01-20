@@ -36,7 +36,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURL, ok := handler.service.CreateShortURL(string(body))
+	_, ok := handler.service.CreateShortURL(string(body))
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
