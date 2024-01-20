@@ -36,7 +36,7 @@ func setFromFlags(config *config.Config) {
 	var databaseURL string
 	flag.StringVar(&serverURL, "a", "localhost:8080", "Net address host:port")
 	flag.StringVar(&baseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
-	flag.StringVar(&fileStoragePath, "f", "/tmp/short-url-db.json", "File storage path")
+	flag.StringVar(&fileStoragePath, "f", "", "File storage path")
 	flag.StringVar(&databaseURL, "d", "", "Database URL")
 	flag.Parse()
 	config.ServerURL = serverURL
