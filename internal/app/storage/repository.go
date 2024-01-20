@@ -23,7 +23,7 @@ var ErrOriginalURLNotFound = errors.New("original url isn't found")
 
 func New(config *config.Config) (URLRepository, error) {
 	if config.DatabaseURL != "" {
-		logger.Logger.Info(config.DatabaseURL)
+		logger.Logger.Info("database ", config.DatabaseURL)
 		// err := createTables(config.DatabaseURL)
 		// return &URLRepositoryPostgres{
 		// 	databaseURL: config.DatabaseURL,
