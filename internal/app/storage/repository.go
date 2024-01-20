@@ -23,10 +23,13 @@ var ErrOriginalURLNotFound = errors.New("original url isn't found")
 
 func New(config *config.Config) (URLRepository, error) {
 	if config.DatabaseURL != "" {
-		err := createTables(config.DatabaseURL)
-		return &URLRepositoryPostgres{
-			databaseURL: config.DatabaseURL,
-		}, err
+		// err := createTables(config.DatabaseURL)
+		// return &URLRepositoryPostgres{
+		// 	databaseURL: config.DatabaseURL,
+		// }, err
+		return &URLRepositoryInMemory{
+			urls: make(map[string]string),
+		}, nil
 	} else if config.FileStoragePath != "" {
 		file, err := os.OpenFile(config.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
