@@ -36,14 +36,14 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	_, ok := handler.service.CreateShortURL(string(body))
+	shortURL, ok := handler.service.CreateShortURL(string(body))
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	res.Header().Add("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + handler.serverConfig.DatabaseURL))
+	res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + shortURL))
 }
 
 func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
