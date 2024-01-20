@@ -38,13 +38,13 @@ func (service *ShortenerServiceImpl) CreateShortURL(originalURL string) (string,
 	}
 	shortURL := util.GetShortURL()
 	_, err := service.repo.FindByShortURL(shortURL)
-	if err != nil && !errors.Is(err, repository.OriginalURLNotFound) {
+	if err != nil && !errors.Is(err, repository.ErrOriginalURLNotFound) {
 		return "", false
 	}
 	for err == nil {
 		shortURL = util.GetShortURL()
 		_, err = service.repo.FindByShortURL(shortURL)
-		if err != nil && !errors.Is(err, repository.OriginalURLNotFound) {
+		if err != nil && !errors.Is(err, repository.ErrOriginalURLNotFound) {
 			return "", false
 		}
 	}

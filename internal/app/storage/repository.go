@@ -19,7 +19,7 @@ type URLRepository interface {
 	PingDB() bool
 }
 
-var OriginalURLNotFound = errors.New("Original url isn't found")
+var ErrOriginalURLNotFound = errors.New("Original url isn't found")
 
 func New(config *config.Config) (URLRepository, error) {
 	if config.DatabaseURL != "" {
@@ -53,7 +53,7 @@ type URLRepositoryInMemory struct {
 func (r *URLRepositoryInMemory) FindByShortURL(shortURL string) (*models.URLInfo, error) {
 	originalURL, ok := r.urls[shortURL]
 	if !ok {
-		return nil, OriginalURLNotFound
+		return nil, ErrOriginalURLNotFound
 	}
 	return &models.URLInfo{
 		ShortURL:    shortURL,
@@ -117,7 +117,7 @@ func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, er
 	if err != nil {
 		logger.Logger.Warn(err.Error())
 		if errors.Is(err, io.EOF) {
-			return nil, OriginalURLNotFound
+			return nil, ErrOriginalURLNotFound
 		}
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, er
 		if err != nil {
 			logger.Logger.Warn(err.Error())
 			if errors.Is(err, io.EOF) {
-				return nil, OriginalURLNotFound
+				return nil, ErrOriginalURLNotFound
 			}
 			return nil, err
 		}
@@ -137,7 +137,7 @@ func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, er
 			return &url, nil
 		}
 	}
-	return nil, OriginalURLNotFound
+	return nil, ErrOriginalURLNotFound
 }
 
 func (r *URLRepositoryFile) PingDB() bool {
@@ -195,7 +195,7 @@ func (r *URLRepositoryPostgres) FindByShortURL(shortURL string) (*models.URLInfo
 	err = conn.QueryRow(context.Background(), query, shortURL).Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, OriginalURLNotFound
+			return nil, ErrOriginalURLNotFound
 		}
 		return nil, err
 	}
