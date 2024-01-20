@@ -19,7 +19,7 @@ type URLRepository interface {
 	PingDB() bool
 }
 
-var ErrOriginalURLNotFound = errors.New("Original url isn't found")
+var ErrOriginalURLNotFound = errors.New("original url isn't found")
 
 func New(config *config.Config) (URLRepository, error) {
 	if config.DatabaseURL != "" {
