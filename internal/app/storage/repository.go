@@ -37,7 +37,7 @@ func New(config *config.Config) (URLRepository, error) {
 			encoder: json.NewEncoder(file),
 			decoder: json.NewDecoder(file),
 		}
-		repo.uuidSeq = getUUIdSeqFromFile(repo)
+		repo.uuidSeq = getUUIDSeqFromFile(repo)
 		return repo, nil
 	} else {
 		return &URLRepositoryInMemory{
@@ -51,13 +51,13 @@ type URLRepositoryInMemory struct {
 }
 
 func (r *URLRepositoryInMemory) FindByShortURL(shortURL string) (*models.URLInfo, error) {
-	_, ok := r.urls[shortURL]
+	originalURL, ok := r.urls[shortURL]
 	if !ok {
 		return nil, OriginalURLNotFound
 	}
 	return &models.URLInfo{
 		ShortURL:    shortURL,
-		OriginalURL: r.urls[shortURL],
+		OriginalURL: originalURL,
 	}, nil
 }
 
@@ -77,7 +77,7 @@ type URLRepositoryFile struct {
 	uuidSeq int
 }
 
-func getUUIdSeqFromFile(repo *URLRepositoryFile) int {
+func getUUIDSeqFromFile(repo *URLRepositoryFile) int {
 	uuidSeq := 1
 	urlsFromFile := loadFromFile(repo)
 	for _, el := range urlsFromFile {
