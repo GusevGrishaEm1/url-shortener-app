@@ -23,7 +23,7 @@ import (
 func TestShortenHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	config := config.GetDefaultWihoutRepoInfo()
+	config := config.GetDefault()
 	handlers, err := New(config)
 	require.NoError(t, err)
 	tests := []struct {
@@ -64,7 +64,7 @@ func TestShortenHandler(t *testing.T) {
 func TestExpandHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	handlers, err := New(config.GetDefault())
 	require.NoError(t, err)
 	originalURL := "https://gophercises.com/#signup"
 	savedShortURL := initShortURLSForExpandHandler(handlers, originalURL)
@@ -114,7 +114,7 @@ func initShortURLSForExpandHandler(handlers ShortenerHandler, originalURL string
 func TestShortenJSONHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	handlers, err := New(config.GetDefault())
 	require.NoError(t, err)
 	tests := []struct {
 		name            string
@@ -165,7 +165,7 @@ func TestShortenJSONHandler(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	handlers, err := New(config.GetDefault())
 	require.NoError(t, err)
 	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
@@ -205,7 +205,7 @@ func readJSON(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMess
 func TestGzipDecompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	handlers, err := New(config.GetDefault())
 	require.NoError(t, err)
 	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
