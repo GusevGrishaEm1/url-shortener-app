@@ -22,11 +22,12 @@ type ShortenerHandlerImpl struct {
 	serverConfig *config.Config
 }
 
-func New(config *config.Config) ShortenerHandler {
+func New(config *config.Config) (ShortenerHandler, error) {
+	service, err := service.New(config)
 	return &ShortenerHandlerImpl{
-		service:      service.New(config),
+		service:      service,
 		serverConfig: config,
-	}
+	}, err
 }
 
 func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req *http.Request) {

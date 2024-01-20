@@ -12,6 +12,13 @@ func GetDefault() *Config {
 		ServerURL:       "localhost:8080",
 		BaseReturnURL:   "http://localhost:8080",
 		FileStoragePath: "/tmp/short-url-db.json",
-		DatabaseURL:     "postgres://grisha:grisha_db@localhost:5432/urls",
+		DatabaseURL:     "postgres://grisha:grisha@localhost:5432/url",
+	}
+}
+
+func GetDefaultWihoutRepoInfo() *Config {
+	return &Config{
+		ServerURL:     "localhost:8080",
+		BaseReturnURL: "http://localhost:8080",
 	}
 }

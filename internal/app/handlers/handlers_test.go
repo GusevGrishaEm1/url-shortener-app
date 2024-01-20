@@ -23,8 +23,9 @@ import (
 func TestShortenHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	config := config.GetDefault()
-	handlers := New(config)
+	config := config.GetDefaultWihoutRepoInfo()
+	handlers, err := New(config)
+	require.NoError(t, err)
 	tests := []struct {
 		name           string
 		url            string
@@ -63,7 +64,8 @@ func TestShortenHandler(t *testing.T) {
 func TestExpandHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault())
+	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	require.NoError(t, err)
 	originalURL := "https://gophercises.com/#signup"
 	savedShortURL := initShortURLSForExpandHandler(handlers, originalURL)
 	tests := []struct {
@@ -112,7 +114,8 @@ func initShortURLSForExpandHandler(handlers ShortenerHandler, originalURL string
 func TestShortenJSONHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault())
+	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	require.NoError(t, err)
 	tests := []struct {
 		name            string
 		reqBody         []byte
@@ -162,7 +165,8 @@ func TestShortenJSONHandler(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault())
+	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	require.NoError(t, err)
 	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
 	expectedResBody := `{"result":%s}`
@@ -201,7 +205,8 @@ func readJSON(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMess
 func TestGzipDecompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault())
+	handlers, err := New(config.GetDefaultWihoutRepoInfo())
+	require.NoError(t, err)
 	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
 	expectedResBody := `{"result":%s}`

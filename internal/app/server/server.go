@@ -11,17 +11,20 @@ import (
 )
 
 func StartServer(serverConfig *config.Config) error {
-	mux := initHandlers(serverConfig)
-	err := http.ListenAndServe(serverConfig.ServerURL, mux)
+	mux, err := initHandlers(serverConfig)
+	if err != nil {
+		return err
+	}
+	err = http.ListenAndServe(serverConfig.ServerURL, mux)
 	return err
 }
 
-func initHandlers(serverConfig *config.Config) *chi.Mux {
-	handlers := handlers.New(serverConfig)
+func initHandlers(serverConfig *config.Config) (*chi.Mux, error) {
+	handlers, err := handlers.New(serverConfig)
 	r := chi.NewRouter()
 	r.Post("/", gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenHandler)))
 	r.Get("/{shorturl}", gzipreq.RequestZipper(logger.RequestLogger(handlers.ExpandHandler)))
 	r.Post("/api/shorten", gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenJSONHandler)))
 	r.Get("/ping", gzipreq.RequestZipper(logger.RequestLogger(handlers.PingDBHandler)))
-	return r
+	return r, err
 }
