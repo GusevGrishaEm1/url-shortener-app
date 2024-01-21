@@ -14,9 +14,10 @@ import (
 )
 
 type URLRepository interface {
-	FindByShortURL(shortURL string) (*models.URLInfo, error)
-	Save(models.URLInfo) error
-	PingDB() bool
+	FindByShortURL(context.Context, string) (*models.URLInfo, error)
+	Save(context.Context, models.URLInfo) error
+	SaveBatch(context.Context, []models.URLInfo) error
+	PingDB(context.Context) bool
 }
 
 var ErrOriginalURLNotFound = errors.New("original url isn't found")
@@ -44,7 +45,7 @@ type URLRepositoryInMemory struct {
 	urls map[string]string
 }
 
-func (r *URLRepositoryInMemory) FindByShortURL(shortURL string) (*models.URLInfo, error) {
+func (r *URLRepositoryInMemory) FindByShortURL(_ context.Context, shortURL string) (*models.URLInfo, error) {
 	originalURL, ok := r.urls[shortURL]
 	if !ok {
 		return nil, ErrOriginalURLNotFound
@@ -55,13 +56,23 @@ func (r *URLRepositoryInMemory) FindByShortURL(shortURL string) (*models.URLInfo
 	}, nil
 }
 
-func (r *URLRepositoryInMemory) Save(url models.URLInfo) error {
+func (r *URLRepositoryInMemory) Save(_ context.Context, url models.URLInfo) error {
 	r.urls[url.ShortURL] = url.OriginalURL
 	return nil
 }
 
-func (r *URLRepositoryInMemory) PingDB() bool {
+func (r *URLRepositoryInMemory) PingDB(_ context.Context) bool {
 	return false
+}
+
+func (r *URLRepositoryInMemory) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+	for _, url := range urls {
+		err := r.Save(ctx, url)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type URLRepositoryFile struct {
@@ -102,7 +113,7 @@ func loadFromFile(repo *URLRepositoryFile) []models.URLInfo {
 	return array
 }
 
-func (r *URLRepositoryFile) Save(url models.URLInfo) error {
+func (r *URLRepositoryFile) Save(_ context.Context, url models.URLInfo) error {
 	file, err := os.OpenFile(r.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return err
@@ -113,7 +124,7 @@ func (r *URLRepositoryFile) Save(url models.URLInfo) error {
 	return encoder.Encode(url)
 }
 
-func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, error) {
+func (r *URLRepositoryFile) FindByShortURL(_ context.Context, shortURL string) (*models.URLInfo, error) {
 	file, err := os.OpenFile(r.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
@@ -147,8 +158,18 @@ func (r *URLRepositoryFile) FindByShortURL(shortURL string) (*models.URLInfo, er
 	return nil, ErrOriginalURLNotFound
 }
 
-func (r *URLRepositoryFile) PingDB() bool {
+func (r *URLRepositoryFile) PingDB(_ context.Context) bool {
 	return false
+}
+
+func (r *URLRepositoryFile) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+	for _, url := range urls {
+		err := r.Save(ctx, url)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type URLRepositoryPostgres struct {
@@ -164,42 +185,64 @@ func createTables(databaseURL string) error {
 			original_url varchar not null
 		);
 	`
-	conn, err := pgx.Connect(context.Background(), databaseURL)
+	conn, err := pgx.Connect(context.TODO(), databaseURL)
 	if err != nil {
 		return err
 	}
-	_, err = conn.Query(context.Background(), query)
+	_, err = conn.Query(context.TODO(), query)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *URLRepositoryPostgres) Save(url models.URLInfo) error {
+func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) error {
 	query := `
 		insert into urls(short_url, original_url) values($1,$2)
 	`
-	conn, err := pgx.Connect(context.Background(), r.databaseURL)
+	conn, err := pgx.Connect(ctx, r.databaseURL)
 	if err != nil {
 		return err
 	}
-	defer conn.Close(context.Background())
-	_, err = conn.Query(context.Background(), query, url.ShortURL, url.OriginalURL)
+	defer conn.Close(ctx)
+	_, err = conn.Query(ctx, query, url.ShortURL, url.OriginalURL)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *URLRepositoryPostgres) FindByShortURL(shortURL string) (*models.URLInfo, error) {
+func (r *URLRepositoryPostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+	conn, err := pgx.Connect(ctx, r.databaseURL)
+	if err != nil {
+		return err
+	}
+	var tr pgx.Tx
+	tr, err = conn.Begin(ctx)
+	if err != nil {
+		tr.Rollback(ctx)
+		return err
+	}
+	for _, url := range urls {
+		err := r.Save(ctx, url)
+		if err != nil {
+			tr.Rollback(ctx)
+			return err
+		}
+	}
+	tr.Commit(ctx)
+	return nil
+}
+
+func (r *URLRepositoryPostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URLInfo, error) {
 	query := "select id, short_url, original_url from urls where short_url = $1"
-	conn, err := pgx.Connect(context.Background(), r.databaseURL)
+	conn, err := pgx.Connect(ctx, r.databaseURL)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close(context.Background())
+	defer conn.Close(ctx)
 	var url models.URLInfo
-	err = conn.QueryRow(context.Background(), query, shortURL).Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
+	err = conn.QueryRow(ctx, query, shortURL).Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrOriginalURLNotFound
@@ -209,11 +252,11 @@ func (r *URLRepositoryPostgres) FindByShortURL(shortURL string) (*models.URLInfo
 	return &url, nil
 }
 
-func (r *URLRepositoryPostgres) PingDB() bool {
-	conn, err := pgx.Connect(context.Background(), r.databaseURL)
+func (r *URLRepositoryPostgres) PingDB(ctx context.Context) bool {
+	conn, err := pgx.Connect(ctx, r.databaseURL)
 	if err != nil {
 		return false
 	}
-	defer conn.Close(context.Background())
-	return conn.Ping(context.Background()) == nil
+	defer conn.Close(ctx)
+	return conn.Ping(ctx) == nil
 }

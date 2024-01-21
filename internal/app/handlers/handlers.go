@@ -13,6 +13,7 @@ import (
 type ShortenerHandler interface {
 	ShortenHandler(res http.ResponseWriter, req *http.Request)
 	ShortenJSONHandler(res http.ResponseWriter, req *http.Request)
+	ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request)
 	ExpandHandler(res http.ResponseWriter, req *http.Request)
 	PingDBHandler(res http.ResponseWriter, req *http.Request)
 }
@@ -36,7 +37,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURL, ok := handler.service.CreateShortURL(string(body))
+	shortURL, ok := handler.service.CreateShortURL(req.Context(), string(body))
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -47,13 +48,18 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 }
 
 func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
-	var reqModel models.Request
-	dec := json.NewDecoder(req.Body)
-	if err := dec.Decode(&reqModel); err != nil {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURL, ok := handler.service.CreateShortURL(reqModel.URL)
+	var reqModel models.Request
+	err = json.Unmarshal(body, &reqModel)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	shortURL, ok := handler.service.CreateShortURL(req.Context(), reqModel.URL)
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -63,15 +69,16 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	}
 	res.Header().Add("content-type", "application/json")
 	res.WriteHeader(http.StatusCreated)
-	enc := json.NewEncoder(res)
-	if err := enc.Encode(resModel); err != nil {
+	body, err = json.Marshal(resModel)
+	res.Write(body)
+	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 }
 
 func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
-	originalURL, ok := handler.service.GetByShortURL(req.URL.Path[1:])
+	originalURL, ok := handler.service.GetByShortURL(req.Context(), req.URL.Path[1:])
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -81,10 +88,40 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 }
 
 func (handler *ShortenerHandlerImpl) PingDBHandler(res http.ResponseWriter, req *http.Request) {
-	ok := handler.service.PingDB()
+	ok := handler.service.PingDB(req.Context())
 	if !ok {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	res.WriteHeader(http.StatusOK)
+}
+
+func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var reqModel models.URLInfoBatchRequest
+	err = json.Unmarshal(body, &reqModel)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	shortURLArray, ok := handler.service.CreateBatchShortURL(req.Context(), reqModel.Array)
+	if !ok {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	resModel := models.URLInfoBatchResponse{
+		Array: shortURLArray,
+	}
+	res.Header().Add("content-type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+	body, err = json.Marshal(resModel)
+	res.Write(body)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
 }
