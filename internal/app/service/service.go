@@ -100,7 +100,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 		}
 		arrayToReturn[i] = models.ShortURLInfoBatch{
 			CorrelationID: url.CorrelationID,
-			ShortURL:      shortURL,
+			ShortURL:      service.config.BaseReturnURL + "/" + shortURL,
 		}
 	}
 	err := service.repo.SaveBatch(ctx, arrayToSave)
