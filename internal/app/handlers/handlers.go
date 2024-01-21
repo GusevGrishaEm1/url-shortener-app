@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
@@ -38,7 +39,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	shortURL, ok := handler.service.CreateShortURL(ctx, string(body))
 	if !ok {
@@ -62,7 +63,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	shortURL, ok := handler.service.CreateShortURL(ctx, reqModel.URL)
 	if !ok {
@@ -83,7 +84,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 }
 
 func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	originalURL, ok := handler.service.GetByShortURL(ctx, req.URL.Path[1:])
 	if !ok {
@@ -95,7 +96,7 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 }
 
 func (handler *ShortenerHandlerImpl) PingDBHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	ok := handler.service.PingDB(ctx)
 	if !ok {
@@ -117,7 +118,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithCancel(req.Context())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	shortURLArray, ok := handler.service.CreateBatchShortURL(ctx, reqModel.Array)
 	if !ok {
