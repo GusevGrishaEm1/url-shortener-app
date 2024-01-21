@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server"
 )
@@ -13,7 +14,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = server.StartServer(parseFlagsAndEnv())
+	err = server.StartServer(config.GetDefault())
 	if err != nil {
 		panic(err)
 	}

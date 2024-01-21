@@ -99,7 +99,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 			OriginalURL: url.OriginalURL,
 		})
 		arrayToReturn = append(arrayToReturn, models.ShortURLInfoBatch{
-			CorrelationId: url.CorrelationId,
+			CorrelationID: url.CorrelationID,
 			ShortURL:      shortURL,
 		})
 	}
