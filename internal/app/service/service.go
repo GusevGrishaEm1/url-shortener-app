@@ -89,19 +89,19 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 	}
 	arrayToSave := make([]models.URLInfo, len(arr))
 	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
-	for _, url := range arr {
+	for i, url := range arr {
 		shortURL, ok := generateShortURL(ctx, service)
 		if !ok {
 			return nil, false
 		}
-		arrayToSave = append(arrayToSave, models.URLInfo{
+		arrayToSave[i] = models.URLInfo{
 			ShortURL:    shortURL,
 			OriginalURL: url.OriginalURL,
-		})
-		arrayToReturn = append(arrayToReturn, models.ShortURLInfoBatch{
+		}
+		arrayToReturn[i] = models.ShortURLInfoBatch{
 			CorrelationID: url.CorrelationID,
 			ShortURL:      shortURL,
-		})
+		}
 	}
 	err := service.repo.SaveBatch(ctx, arrayToSave)
 	if err != nil {

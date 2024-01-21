@@ -113,23 +113,20 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	var reqModel models.URLInfoBatchRequest
-	err = json.Unmarshal(body, &reqModel)
+	var urls []models.OriginalURLInfoBatch
+	err = json.Unmarshal(body, &urls)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURLArray, ok := handler.service.CreateBatchShortURL(ctx, reqModel.Array)
+	shortURLArray, ok := handler.service.CreateBatchShortURL(ctx, urls)
 	if !ok {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	resModel := models.URLInfoBatchResponse{
-		Array: shortURLArray,
-	}
 	res.Header().Add("content-type", "application/json")
 	res.WriteHeader(http.StatusCreated)
-	body, err = json.Marshal(resModel)
+	body, err = json.Marshal(shortURLArray)
 	res.Write(body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)

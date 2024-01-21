@@ -14,20 +14,12 @@ type URLInfo struct {
 	OriginalURL string `json:"original_url"`
 }
 
-type URLInfoBatchRequest struct {
-	Array []OriginalURLInfoBatch
-}
-
-type URLInfoBatchResponse struct {
-	Array []ShortURLInfoBatch
-}
-
 type ShortURLInfoBatch struct {
 	CorrelationID string `json:"correlation_id"`
-	ShortURL      string `json:"original_url"`
+	ShortURL      string `json:"short_url"`
 }
 
 type OriginalURLInfoBatch struct {
 	CorrelationID string `json:"correlation_id"`
-	OriginalURL   string `json:"short_url"`
+	OriginalURL   string `json:"original_url"`
 }
