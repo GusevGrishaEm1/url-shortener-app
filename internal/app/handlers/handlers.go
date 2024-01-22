@@ -46,7 +46,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	shortURL, err := handler.service.CreateShortURL(ctx, string(body))
 	if err != nil {
 		if errors.Is(err, &repository.OriginalURLAlreadyExists{}) {
-			logger.Logger.Info("sdf")
+			logger.Logger.Info("ddd")
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusConflict)
 			res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL))
