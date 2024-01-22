@@ -45,17 +45,17 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	shortURL, err := handler.service.CreateShortURL(ctx, string(body))
 	if err != nil {
 		if errors.Is(err, &repository.OriginalURLAlreadyExists{}) {
+			res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL))
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusConflict)
-			res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL))
 			return
 		}
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + shortURL))
 	res.Header().Add("content-type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + shortURL))
 }
 
 func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
@@ -75,17 +75,17 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	shortURL, err := handler.service.CreateShortURL(ctx, reqModel.URL)
 	if err != nil {
 		if errors.Is(err, &repository.OriginalURLAlreadyExists{}) {
-			res.WriteHeader(http.StatusConflict)
 			resModel := models.Response{
 				Result: handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL,
 			}
-			res.Header().Add("content-type", "application/json")
 			body, err = json.Marshal(resModel)
 			res.Write(body)
 			if err != nil {
 				res.WriteHeader(http.StatusBadRequest)
 				return
 			}
+			res.Header().Add("content-type", "application/json")
+			res.WriteHeader(http.StatusConflict)
 			return
 		}
 		res.WriteHeader(http.StatusBadRequest)
@@ -94,14 +94,14 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	resModel := models.Response{
 		Result: handler.serverConfig.BaseReturnURL + "/" + shortURL,
 	}
-	res.Header().Add("content-type", "application/json")
-	res.WriteHeader(http.StatusCreated)
 	body, err = json.Marshal(resModel)
 	res.Write(body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	res.Header().Add("content-type", "application/json")
+	res.WriteHeader(http.StatusCreated)
 }
 
 func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
@@ -146,12 +146,12 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	res.Header().Add("content-type", "application/json")
-	res.WriteHeader(http.StatusCreated)
 	body, err = json.Marshal(shortURLArray)
 	res.Write(body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	res.Header().Add("content-type", "application/json")
+	res.WriteHeader(http.StatusCreated)
 }
