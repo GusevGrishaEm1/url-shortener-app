@@ -11,6 +11,7 @@ import (
 )
 
 func StartServer(serverConfig *config.Config) error {
+	serverConfig.DatabaseURL = "postgres://grisha:grisha@localhost:5432/url"
 	mux, err := initHandlers(serverConfig)
 	if err != nil {
 		return err

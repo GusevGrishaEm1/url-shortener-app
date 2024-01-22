@@ -220,7 +220,7 @@ func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) er
 			case when (select id from new_id) is null
 				then (select short_url from urls where original_url = $2)
 				else ''
-			end as short_url
+			end as shortURL
 	`
 	conn, err := pgx.Connect(ctx, r.databaseURL)
 	if err != nil {

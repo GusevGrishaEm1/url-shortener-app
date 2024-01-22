@@ -46,11 +46,11 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, origina
 	if err != nil {
 		return "", err
 	}
-	service.repo.Save(ctx, models.URLInfo{
+	err = service.repo.Save(ctx, models.URLInfo{
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	})
-	return shortURL, nil
+	return shortURL, err
 }
 
 func generateShortURL(ctx context.Context, service *ShortenerServiceImpl) (string, error) {
