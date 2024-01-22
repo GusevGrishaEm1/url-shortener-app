@@ -20,7 +20,10 @@ type URLRepository interface {
 	PingDB(context.Context) bool
 }
 
-var ErrOriginalURLNotFound = errors.New("original url isn't found")
+var (
+	ErrOriginalURLNotFound      = errors.New("original url isn't found")
+	ErrOriginalURLAlreadyExists = errors.New("original url already exists")
+)
 
 func New(config *config.Config) (URLRepository, error) {
 	if config.DatabaseURL != "" {
@@ -182,7 +185,7 @@ func createTables(databaseURL string) error {
 			id serial primary key,
 			create_ts timestamp default now(),
 			short_url varchar unique not null,
-			original_url varchar not null
+			original_url varchar unique not null
 		);
 	`
 	conn, err := pgx.Connect(context.TODO(), databaseURL)
@@ -198,14 +201,18 @@ func createTables(databaseURL string) error {
 
 func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) error {
 	query := `
-		insert into urls(short_url, original_url) values($1,$2)
+		insert into urls(short_url, original_url) values($1, $2) on conflict do nothing returning id
 	`
 	conn, err := pgx.Connect(ctx, r.databaseURL)
 	if err != nil {
 		return err
 	}
 	defer conn.Close(ctx)
-	_, err = conn.Query(ctx, query, url.ShortURL, url.OriginalURL)
+	var id int
+	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&id)
+	if id == 0 {
+		return ErrOriginalURLAlreadyExists
+	}
 	if err != nil {
 		return err
 	}

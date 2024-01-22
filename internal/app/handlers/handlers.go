@@ -3,12 +3,14 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
+	repository "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 )
 
 type ShortenerHandler interface {
@@ -40,8 +42,12 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURL, ok := handler.service.CreateShortURL(ctx, string(body))
-	if !ok {
+	shortURL, err := handler.service.CreateShortURL(ctx, string(body))
+	if err != nil {
+		if errors.Is(err, repository.ErrOriginalURLAlreadyExists) {
+			res.WriteHeader(http.StatusConflict)
+			return
+		}
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -64,8 +70,8 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURL, ok := handler.service.CreateShortURL(ctx, reqModel.URL)
-	if !ok {
+	shortURL, err := handler.service.CreateShortURL(ctx, reqModel.URL)
+	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -85,8 +91,8 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	originalURL, ok := handler.service.GetByShortURL(ctx, req.URL.Path[1:])
-	if !ok {
+	originalURL, err := handler.service.GetByShortURL(ctx, req.URL.Path[1:])
+	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -119,8 +125,8 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	shortURLArray, ok := handler.service.CreateBatchShortURL(ctx, urls)
-	if !ok {
+	shortURLArray, err := handler.service.CreateBatchShortURL(ctx, urls)
+	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
