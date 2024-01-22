@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	repository "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
@@ -45,6 +46,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	shortURL, err := handler.service.CreateShortURL(ctx, string(body))
 	if err != nil {
 		if errors.Is(err, &repository.OriginalURLAlreadyExists{}) {
+			logger.Logger.Info("sdf")
 			res.Header().Add("content-type", "text/plain")
 			res.WriteHeader(http.StatusConflict)
 			res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL))
@@ -75,6 +77,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	shortURL, err := handler.service.CreateShortURL(ctx, reqModel.URL)
 	if err != nil {
 		if errors.Is(err, &repository.OriginalURLAlreadyExists{}) {
+			logger.Logger.Info("sdf")
 			resModel := models.Response{
 				Result: handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL,
 			}
