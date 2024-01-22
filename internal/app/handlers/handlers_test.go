@@ -14,6 +14,7 @@ import (
 
 	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/stretchr/testify/assert"
@@ -238,15 +239,52 @@ func readJSONGzip(res *http.Response, t *testing.T) ([]byte, map[string]json.Raw
 	return resBody, jsonMap
 }
 
-// func TestPingDBHandler(t *testing.T) {
-// 	handlers := New(config.GetDefault())
-// 	handler := handlers.PingDBHandler
-// 	t.Run("ping db", func(t *testing.T) {
-// 		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
-// 		w := httptest.NewRecorder()
-// 		handler(w, r)
-// 		res := w.Result()
-// 		defer res.Body.Close()
-// 		assert.Equal(t, http.StatusOK, res.StatusCode)
-// 	})
-// }
+func TestShortenJSONBatchHandler(t *testing.T) {
+	err := logger.Init(slog.LevelInfo)
+	require.NoError(t, err)
+	handlers, err := New(config.GetDefault())
+	require.NoError(t, err)
+	tests := []struct {
+		name            string
+		reqBody         []byte
+		expectedResBody string
+		expectedStatus  int
+	}{
+		{
+			name: "test#1",
+			reqBody: []byte(`[
+    					{"correlation_id":"59080686-9e69-4a5b-a8df-9d0b30c14131","original_url":"https://uptrace.dev/blog/context-deadline-exceeded.html"},
+    					{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","original_url":"https://habr.com/ru/companies/nixys/articles/461723/"}
+			]`),
+			expectedResBody: `[
+				{"correlation_id":"59080686-9e69-4a5b-a8df-9d0b30c14131","short_url":"%s"},
+				{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","short_url":"%s"}
+			]`,
+			expectedStatus: 201,
+		},
+		{
+			name:           "test#3",
+			reqBody:        []byte(``),
+			expectedStatus: 400,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(test.reqBody))
+			request.Header.Set("content-type", "application/json")
+			w := httptest.NewRecorder()
+			handlers.ShortenJSONBatchHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+			statusValid := assert.Equal(t, test.expectedStatus, res.StatusCode)
+			if statusValid && test.expectedStatus == http.StatusCreated {
+				var urls []models.ShortURLInfoBatch
+				body, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				err = json.Unmarshal(body, &urls)
+				test.expectedResBody = fmt.Sprintf(test.expectedResBody, urls[0].ShortURL, urls[1].ShortURL)
+				assert.JSONEq(t, test.expectedResBody, string(body))
+			}
+		})
+	}
+}

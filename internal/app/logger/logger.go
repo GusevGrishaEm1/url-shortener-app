@@ -38,7 +38,7 @@ func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
 				slog.Group("request",
 					slog.String("uri", r.RequestURI),
 					slog.String("method", r.Method),
-					slog.String("duration", fmt.Sprint(time.Since(start).Nanoseconds())+"nanos"),
+					slog.String("duration", fmt.Sprint(time.Since(start).Nanoseconds())+" nanos"),
 				),
 				slog.Group("response",
 					slog.Int("status", lw.responseData.status),
