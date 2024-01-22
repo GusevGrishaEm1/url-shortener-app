@@ -92,7 +92,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 		return
 	}
 	resModel := models.Response{
-		Result: handler.serverConfig.BaseReturnURL + "/" + err.(*repository.OriginalURLAlreadyExists).ShortURL,
+		Result: handler.serverConfig.BaseReturnURL + "/" + shortURL,
 	}
 	body, err = json.Marshal(resModel)
 	if err != nil {
