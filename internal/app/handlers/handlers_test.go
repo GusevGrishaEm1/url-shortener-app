@@ -282,6 +282,7 @@ func TestShortenJSONBatchHandler(t *testing.T) {
 				body, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
 				err = json.Unmarshal(body, &urls)
+				require.NoError(t, err)
 				test.expectedResBody = fmt.Sprintf(test.expectedResBody, urls[0].ShortURL, urls[1].ShortURL)
 				assert.JSONEq(t, test.expectedResBody, string(body))
 			}
