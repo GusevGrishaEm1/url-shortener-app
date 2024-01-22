@@ -219,7 +219,7 @@ func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) er
 		) select
 			case when (select id from new_id) is null
 				then (select short_url from urls where original_url = $2)
-				else null
+				else ''
 			end as short_url
 	`
 	conn, err := pgx.Connect(ctx, r.databaseURL)
@@ -227,10 +227,10 @@ func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) er
 		return err
 	}
 	defer conn.Close(ctx)
-	var shortURL *string
-	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&shortURL)
-	if shortURL != nil {
-		return NewErrOriginalURLAlreadyExists(*shortURL)
+	var shortURL string
+	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(shortURL)
+	if shortURL != "" {
+		return NewErrOriginalURLAlreadyExists(shortURL)
 	}
 	if err != nil {
 		return err
