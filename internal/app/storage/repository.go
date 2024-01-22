@@ -227,10 +227,10 @@ func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) er
 		return err
 	}
 	defer conn.Close(ctx)
-	var shortURL string
+	var shortURL *string
 	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&shortURL)
-	if shortURL != "" {
-		return NewErrOriginalURLAlreadyExists(shortURL)
+	if shortURL != nil {
+		return NewErrOriginalURLAlreadyExists(*shortURL)
 	}
 	if err != nil {
 		return err
