@@ -72,8 +72,18 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	}
 	shortURL, err := handler.service.CreateShortURL(ctx, reqModel.URL)
 	if err != nil {
-		if errors.Is(err, repository.ErrOriginalURLAlreadyExists) {
+		if errors.Is(err, &repository.ErrOriginalURLAlreadyExists{}) {
 			res.WriteHeader(http.StatusConflict)
+			resModel := models.Response{
+				Result: handler.serverConfig.BaseReturnURL + "/" + err.(*repository.ErrOriginalURLAlreadyExists).ShortURL,
+			}
+			res.Header().Add("content-type", "application/json")
+			body, err = json.Marshal(resModel)
+			res.Write(body)
+			if err != nil {
+				res.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			return
 		}
 		res.WriteHeader(http.StatusBadRequest)

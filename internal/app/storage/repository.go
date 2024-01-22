@@ -21,9 +21,22 @@ type URLRepository interface {
 }
 
 var (
-	ErrOriginalURLNotFound      = errors.New("original url isn't found")
-	ErrOriginalURLAlreadyExists = errors.New("original url already exists")
+	ErrOriginalURLNotFound = errors.New("original url isn't found")
 )
+
+type ErrOriginalURLAlreadyExists struct {
+	ShortURL string
+}
+
+func (err *ErrOriginalURLAlreadyExists) Error() string {
+	return "original url already exists"
+}
+
+func NewErrOriginalURLAlreadyExists(shortURL string) *ErrOriginalURLAlreadyExists {
+	return &ErrOriginalURLAlreadyExists{
+		ShortURL: shortURL,
+	}
+}
 
 func New(config *config.Config) (URLRepository, error) {
 	if config.DatabaseURL != "" {
@@ -201,17 +214,25 @@ func createTables(databaseURL string) error {
 
 func (r *URLRepositoryPostgres) Save(ctx context.Context, url models.URLInfo) error {
 	query := `
-		insert into urls(short_url, original_url) values($1, $2) on conflict do nothing returning id
+		with new_id as (
+			insert into urls(short_url, original_url) values($1, $2)
+			on conflict(original_url) do nothing
+			returning id
+		) select
+			case when (select id from new_id) is null
+				then (select short_url from urls where original_url = $2)
+				else null
+			end as short_url
 	`
 	conn, err := pgx.Connect(ctx, r.databaseURL)
 	if err != nil {
 		return err
 	}
 	defer conn.Close(ctx)
-	var id int
-	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&id)
-	if id == 0 {
-		return ErrOriginalURLAlreadyExists
+	var shortURL string
+	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&shortURL)
+	if shortURL != "" {
+		return NewErrOriginalURLAlreadyExists(shortURL)
 	}
 	if err != nil {
 		return err
