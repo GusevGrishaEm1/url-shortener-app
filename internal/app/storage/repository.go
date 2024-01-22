@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var ErrOriginalURLNotFound = errors.New("original url isn't found")
+
 type URLRepository interface {
 	FindByShortURL(context.Context, string) (*models.URLInfo, error)
 	Save(context.Context, models.URLInfo) error
@@ -20,20 +22,16 @@ type URLRepository interface {
 	PingDB(context.Context) bool
 }
 
-var (
-	ErrOriginalURLNotFound = errors.New("original url isn't found")
-)
-
-type ErrOriginalURLAlreadyExists struct {
+type OriginalURLAlreadyExists struct {
 	ShortURL string
 }
 
-func (err *ErrOriginalURLAlreadyExists) Error() string {
+func (err *OriginalURLAlreadyExists) Error() string {
 	return "original url already exists"
 }
 
-func NewErrOriginalURLAlreadyExists(shortURL string) *ErrOriginalURLAlreadyExists {
-	return &ErrOriginalURLAlreadyExists{
+func NewErrOriginalURLAlreadyExists(shortURL string) *OriginalURLAlreadyExists {
+	return &OriginalURLAlreadyExists{
 		ShortURL: shortURL,
 	}
 }
