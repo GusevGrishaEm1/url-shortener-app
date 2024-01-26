@@ -57,6 +57,9 @@ func (r *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
 	`
 	var tr pgx.Tx
 	conn, err := pgx.Connect(ctx, r.databaseURL)
+	if err != nil {
+		return err
+	}
 	tr, err = conn.Begin(ctx)
 	if err != nil {
 		return err
