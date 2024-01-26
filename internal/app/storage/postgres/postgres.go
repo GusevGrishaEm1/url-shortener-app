@@ -43,7 +43,7 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 	return nil
 }
 
-func (r *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
+func (storage *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
 	query := `
 		with new_id as (
 			insert into urls(short_url, original_url) values($1, $2)
@@ -56,7 +56,7 @@ func (r *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
 			end as shortURL
 	`
 	var tr pgx.Tx
-	conn, err := pgx.Connect(ctx, r.databaseURL)
+	conn, err := pgx.Connect(ctx, storage.databaseURL)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (r *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
 	return nil
 }
 
-func (r *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
 	query := `
 	with new_id as (
 		insert into urls(short_url, original_url) values($1, $2)
@@ -91,7 +91,7 @@ func (r *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) 
 			else ''
 		end as shortURL
 	`
-	conn, err := pgx.Connect(ctx, r.databaseURL)
+	conn, err := pgx.Connect(ctx, storage.databaseURL)
 	if err != nil {
 		return err
 	}
@@ -123,9 +123,9 @@ func (r *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) 
 	return nil
 }
 
-func (r *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URLInfo, error) {
+func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URLInfo, error) {
 	query := "select id, short_url, original_url from urls where short_url = $1"
-	conn, err := pgx.Connect(ctx, r.databaseURL)
+	conn, err := pgx.Connect(ctx, storage.databaseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +141,8 @@ func (r *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (
 	return &url, nil
 }
 
-func (r *StoragePostgres) Ping(ctx context.Context) bool {
-	conn, err := pgx.Connect(ctx, r.databaseURL)
+func (storage *StoragePostgres) Ping(ctx context.Context) bool {
+	conn, err := pgx.Connect(ctx, storage.databaseURL)
 	if err != nil {
 		return false
 	}
