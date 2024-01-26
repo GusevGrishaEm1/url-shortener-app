@@ -116,6 +116,12 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 		}
 		return nil
 	})
+	res := conn.SendBatch(ctx, batch)
+	err = res.Close()
+	if err != nil {
+		tr.Rollback(ctx)
+		return err
+	}
 	tr.Commit(ctx)
 	return nil
 }
