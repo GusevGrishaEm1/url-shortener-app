@@ -14,7 +14,6 @@ func main() {
 		panic(err)
 	}
 	config := parseFlagsAndEnv()
-	config.DatabaseURL = "postgres://grisha:grisha@localhost:5432/url"
 	err = server.StartServer(config)
 	if err != nil {
 		panic(err)
