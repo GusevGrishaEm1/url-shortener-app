@@ -95,9 +95,11 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 	if err != nil {
 		return err
 	}
+	defer conn.Close(ctx)
 	batch := &pgx.Batch{}
+	var queueQuery *pgx.QueuedQuery
 	for _, el := range urls {
-		batch.Queue(query, el.ShortURL, el.OriginalURL)
+		queueQuery = batch.Queue(query, el.ShortURL, el.OriginalURL)
 	}
 	var tr pgx.Tx
 	tr, err = conn.Begin(ctx)
@@ -105,20 +107,15 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 		tr.Rollback(ctx)
 		return err
 	}
-	res := conn.SendBatch(ctx, batch)
-	defer res.Close()
-	defer conn.Close(ctx)
-	len := batch.Len()
-	counter := 0
-	for counter < len {
+	queueQuery.QueryRow(func(row pgx.Row) error {
 		var shortURL string
-		res.QueryRow().Scan(&shortURL)
+		row.Scan(&shortURL)
 		if shortURL != "" {
 			tr.Rollback(ctx)
 			return customerrors.NewErrOriginalURLAlreadyExists(shortURL)
 		}
-		counter++
-	}
+		return nil
+	})
 	tr.Commit(ctx)
 	return nil
 }
