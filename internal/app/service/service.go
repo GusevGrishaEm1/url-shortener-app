@@ -6,13 +6,10 @@ import (
 	"sync"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
+	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
-	repository "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/util"
-)
-
-var (
-	ErrOriginalIsEmpty = errors.New("original url is empty")
 )
 
 type ShortenerService interface {
@@ -23,16 +20,16 @@ type ShortenerService interface {
 }
 
 type ShortenerServiceImpl struct {
-	config *config.Config
-	mu     sync.Mutex
-	repo   repository.URLRepository
+	config  *config.Config
+	mu      sync.Mutex
+	storage storage.Storage
 }
 
 func New(config *config.Config) (ShortenerService, error) {
-	repo, err := repository.New(config)
+	storage, err := storage.New(storage.GetStorageTypeByConfig(config), config)
 	return &ShortenerServiceImpl{
-		config: config,
-		repo:   repo,
+		config:  config,
+		storage: storage,
 	}, err
 }
 
@@ -40,13 +37,13 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, origina
 	service.mu.Lock()
 	defer service.mu.Unlock()
 	if originalURL == "" {
-		return "", ErrOriginalIsEmpty
+		return "", customerrors.ErrOriginalIsEmpty
 	}
 	shortURL, err := generateShortURL(ctx, service)
 	if err != nil {
 		return "", err
 	}
-	err = service.repo.Save(ctx, models.URLInfo{
+	err = service.storage.Save(ctx, models.URLInfo{
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
 	})
@@ -55,14 +52,14 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, origina
 
 func generateShortURL(ctx context.Context, service *ShortenerServiceImpl) (string, error) {
 	shortURL := util.GetShortURL()
-	_, err := service.repo.FindByShortURL(ctx, shortURL)
-	if err != nil && !errors.Is(err, repository.ErrOriginalURLNotFound) {
+	_, err := service.storage.FindByShortURL(ctx, shortURL)
+	if err != nil && !errors.Is(err, customerrors.ErrOriginalURLNotFound) {
 		return "", err
 	}
 	for err == nil {
 		shortURL = util.GetShortURL()
-		_, err = service.repo.FindByShortURL(ctx, shortURL)
-		if err != nil && !errors.Is(err, repository.ErrOriginalURLNotFound) {
+		_, err = service.storage.FindByShortURL(ctx, shortURL)
+		if err != nil && !errors.Is(err, customerrors.ErrOriginalURLNotFound) {
 			return "", err
 		}
 	}
@@ -72,7 +69,7 @@ func generateShortURL(ctx context.Context, service *ShortenerServiceImpl) (strin
 func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL string) (string, error) {
 	service.mu.Lock()
 	defer service.mu.Unlock()
-	url, err := service.repo.FindByShortURL(ctx, shortURL)
+	url, err := service.storage.FindByShortURL(ctx, shortURL)
 	if err != nil {
 		return "", err
 	}
@@ -82,14 +79,14 @@ func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL
 func (service *ShortenerServiceImpl) PingDB(ctx context.Context) bool {
 	service.mu.Lock()
 	defer service.mu.Unlock()
-	return service.repo.PingDB(ctx)
+	return service.storage.Ping(ctx)
 }
 
 func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error) {
 	service.mu.Lock()
 	defer service.mu.Unlock()
 	if len(arr) == 0 {
-		return nil, ErrOriginalIsEmpty
+		return nil, customerrors.ErrOriginalIsEmpty
 	}
 	arrayToSave := make([]models.URLInfo, len(arr))
 	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
@@ -107,7 +104,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 			ShortURL:      service.config.BaseReturnURL + "/" + shortURL,
 		}
 	}
-	err := service.repo.SaveBatch(ctx, arrayToSave)
+	err := service.storage.SaveBatch(ctx, arrayToSave)
 	if err != nil {
 		return nil, err
 	}
