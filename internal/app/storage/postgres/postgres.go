@@ -108,16 +108,16 @@ func (r *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) 
 	res := conn.SendBatch(ctx, batch)
 	defer res.Close()
 	defer conn.Close(ctx)
-	size := batch.Len()
-	i := 0
-	for i < size {
+	len := batch.Len()
+	counter := 0
+	for counter < len {
 		var shortURL string
 		res.QueryRow().Scan(&shortURL)
 		if shortURL != "" {
 			tr.Rollback(ctx)
 			return customerrors.NewErrOriginalURLAlreadyExists(shortURL)
 		}
-		i++
+		counter++
 	}
 	tr.Commit(ctx)
 	return nil
