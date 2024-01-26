@@ -35,6 +35,7 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 	if err != nil {
 		return err
 	}
+	defer conn.Close(context.TODO())
 	_, err = conn.Query(context.TODO(), query)
 	if err != nil {
 		return err
@@ -102,6 +103,8 @@ func (r *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) 
 		return err
 	}
 	res := conn.SendBatch(ctx, batch)
+	defer res.Close()
+	defer conn.Close(ctx)
 	size := batch.Len()
 	i := 0
 	for i < size {
