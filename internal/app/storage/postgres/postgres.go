@@ -46,17 +46,7 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 }
 
 func (storage *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
-	query := `
-		with new_id as (
-			insert into urls(short_url, original_url) values($1, $2)
-			on conflict(original_url) do nothing
-			returning id
-		) select
-			case when (select id from new_id) is null
-				then (select short_url from urls where original_url = $2)
-				else ''
-			end as shortURL
-	`
+	query := getInsertQuery()
 	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -76,17 +66,7 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URLInfo) er
 }
 
 func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
-	query := `
-	with new_id as (
-		insert into urls(short_url, original_url) values($1, $2)
-		on conflict(original_url) do nothing
-		returning id
-	) select
-		case when (select id from new_id) is null
-			then (select short_url from urls where original_url = $2)
-			else ''
-		end as shortURL
-	`
+	query := getInsertQuery()
 	batch := &pgx.Batch{}
 	var queueQuery *pgx.QueuedQuery
 	for _, el := range urls {
@@ -114,6 +94,20 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 	}
 	tr.Commit(ctx)
 	return nil
+}
+
+func getInsertQuery() string {
+	return `
+	with new_id as (
+		insert into urls(short_url, original_url) values($1, $2)
+		on conflict(original_url) do nothing
+		returning id
+	) select
+		case when (select id from new_id) is null
+			then (select short_url from urls where original_url = $2)
+			else ''
+		end as shortURL
+	`
 }
 
 func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URLInfo, error) {
