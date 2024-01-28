@@ -13,6 +13,9 @@ import (
 
 func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
 	pool, err := pgxpool.New(context.TODO(), config.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
 	storage := &StoragePostgres{
 		databaseURL: config.DatabaseURL,
 		pool:        pool,
@@ -35,15 +38,10 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 			original_url varchar unique not null
 		);
 	`
-	tr, err := storage.pool.Begin(context.TODO())
+	_, err := storage.pool.Exec(context.TODO(), query)
 	if err != nil {
 		return err
 	}
-	_, err = tr.Query(context.TODO(), query)
-	if err != nil {
-		return err
-	}
-	tr.Commit(context.TODO())
 	return nil
 }
 
