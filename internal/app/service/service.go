@@ -12,20 +12,13 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/util"
 )
 
-type ShortenerService interface {
-	CreateShortURL(ctx context.Context, shortURL string) (string, error)
-	CreateBatchShortURL(ctx context.Context, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error)
-	GetByShortURL(ctx context.Context, shortURL string) (string, error)
-	PingDB(ctx context.Context) bool
-}
-
 type ShortenerServiceImpl struct {
 	config  *config.Config
 	mu      sync.Mutex
 	storage storage.Storage
 }
 
-func New(config *config.Config) (ShortenerService, error) {
+func New(config *config.Config) (*ShortenerServiceImpl, error) {
 	storage, err := storage.New(storage.GetStorageTypeByConfig(config), config)
 	return &ShortenerServiceImpl{
 		config:  config,
@@ -76,7 +69,7 @@ func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL
 	return url.OriginalURL, nil
 }
 
-func (service *ShortenerServiceImpl) PingDB(ctx context.Context) bool {
+func (service *ShortenerServiceImpl) PingStorage(ctx context.Context) bool {
 	service.mu.Lock()
 	defer service.mu.Unlock()
 	return service.storage.Ping(ctx)

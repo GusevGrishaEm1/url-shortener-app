@@ -8,18 +8,22 @@ import (
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
+	pool, err := pgxpool.New(context.TODO(), config.DatabaseURL)
 	storage := &StoragePostgres{
 		databaseURL: config.DatabaseURL,
+		pool:        pool,
 	}
-	err := storage.createTables(config.DatabaseURL)
+	err = storage.createTables(config.DatabaseURL)
 	return storage, err
 }
 
 type StoragePostgres struct {
 	databaseURL string
+	pool        *pgxpool.Pool
 }
 
 func (storage *StoragePostgres) createTables(databaseURL string) error {
@@ -31,15 +35,15 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 			original_url varchar unique not null
 		);
 	`
-	conn, err := pgx.Connect(context.TODO(), databaseURL)
+	tr, err := storage.pool.Begin(context.TODO())
 	if err != nil {
 		return err
 	}
-	defer conn.Close(context.TODO())
-	_, err = conn.Query(context.TODO(), query)
+	_, err = tr.Query(context.TODO(), query)
 	if err != nil {
 		return err
 	}
+	tr.Commit(context.TODO())
 	return nil
 }
 
@@ -55,18 +59,12 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URLInfo) er
 				else ''
 			end as shortURL
 	`
-	var tr pgx.Tx
-	conn, err := pgx.Connect(ctx, storage.databaseURL)
+	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	tr, err = conn.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close(ctx)
 	var shortURL string
-	err = conn.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&shortURL)
+	err = tr.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&shortURL)
 	if shortURL != "" {
 		tr.Rollback(ctx)
 		return customerrors.NewErrOriginalURLAlreadyExists(shortURL)
@@ -91,18 +89,12 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 			else ''
 		end as shortURL
 	`
-	conn, err := pgx.Connect(ctx, storage.databaseURL)
-	if err != nil {
-		return err
-	}
-	defer conn.Close(ctx)
 	batch := &pgx.Batch{}
 	var queueQuery *pgx.QueuedQuery
 	for _, el := range urls {
 		queueQuery = batch.Queue(query, el.ShortURL, el.OriginalURL)
 	}
-	var tr pgx.Tx
-	tr, err = conn.Begin(ctx)
+	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
 		tr.Rollback(ctx)
 		return err
@@ -116,7 +108,7 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 		}
 		return nil
 	})
-	res := conn.SendBatch(ctx, batch)
+	res := tr.SendBatch(ctx, batch)
 	err = res.Close()
 	if err != nil {
 		tr.Rollback(ctx)
@@ -128,13 +120,8 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 
 func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URLInfo, error) {
 	query := "select id, short_url, original_url from urls where short_url = $1"
-	conn, err := pgx.Connect(ctx, storage.databaseURL)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(ctx)
 	var url models.URLInfo
-	err = conn.QueryRow(ctx, query, shortURL).Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
+	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, customerrors.ErrOriginalURLNotFound
@@ -145,10 +132,5 @@ func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL str
 }
 
 func (storage *StoragePostgres) Ping(ctx context.Context) bool {
-	conn, err := pgx.Connect(ctx, storage.databaseURL)
-	if err != nil {
-		return false
-	}
-	defer conn.Close(ctx)
-	return conn.Ping(ctx) == nil
+	return storage.pool.Ping(ctx) == nil
 }

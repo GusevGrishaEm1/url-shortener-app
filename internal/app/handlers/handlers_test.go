@@ -98,7 +98,7 @@ func TestExpandHandler(t *testing.T) {
 	}
 }
 
-func initShortURLSForExpandHandler(handlers ShortenerHandler, originalURL string) string {
+func initShortURLSForExpandHandler(handlers *ShortenerHandlerImpl, originalURL string) string {
 	request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(originalURL)))
 	w := httptest.NewRecorder()
 	handlers.ShortenHandler(w, request)

@@ -13,20 +13,19 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 )
 
-type ShortenerHandler interface {
-	ShortenHandler(res http.ResponseWriter, req *http.Request)
-	ShortenJSONHandler(res http.ResponseWriter, req *http.Request)
-	ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request)
-	ExpandHandler(res http.ResponseWriter, req *http.Request)
-	PingDBHandler(res http.ResponseWriter, req *http.Request)
+type ShortenerService interface {
+	CreateShortURL(ctx context.Context, shortURL string) (string, error)
+	CreateBatchShortURL(ctx context.Context, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error)
+	GetByShortURL(ctx context.Context, shortURL string) (string, error)
+	PingStorage(ctx context.Context) bool
 }
 
 type ShortenerHandlerImpl struct {
-	service      service.ShortenerService
+	service      ShortenerService
 	serverConfig *config.Config
 }
 
-func New(config *config.Config) (ShortenerHandler, error) {
+func New(config *config.Config) (*ShortenerHandlerImpl, error) {
 	service, err := service.New(config)
 	return &ShortenerHandlerImpl{
 		service:      service,
@@ -118,10 +117,10 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (handler *ShortenerHandlerImpl) PingDBHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *ShortenerHandlerImpl) PingStorageHandler(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ok := handler.service.PingDB(ctx)
+	ok := handler.service.PingStorage(ctx)
 	if !ok {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
@@ -145,12 +144,25 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	}
 	shortURLArray, err := handler.service.CreateBatchShortURL(ctx, urls)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		return
+		var cusErr *customerrors.OriginalURLAlreadyExists
+		if errors.As(err, &cusErr) {
+			resModel := models.Response{
+				Result: handler.serverConfig.BaseReturnURL + "/" + err.(*customerrors.OriginalURLAlreadyExists).ShortURL,
+			}
+			body, err = json.Marshal(resModel)
+			if err != nil {
+				res.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			res.Header().Add("content-type", "application/json")
+			res.WriteHeader(http.StatusConflict)
+			res.Write(body)
+			return
+		}
 	}
 	body, err = json.Marshal(shortURLArray)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
+		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	res.Header().Add("content-type", "application/json")
