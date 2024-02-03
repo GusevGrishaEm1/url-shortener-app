@@ -48,22 +48,22 @@ func (storage *StorageFile) setSeqFromFile() {
 	storage.userIDSeq = userIDSeq
 }
 
-func (storage *StorageFile) loadFromFile() []*URLInFile {
-	var urlInFile *URLInFile
-	array := make([]*URLInFile, 0)
+func (storage *StorageFile) loadFromFile() []URLInFile {
+	array := make([]URLInFile, 0)
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return array
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(urlInFile)
+	urlInFile := URLInFile{}
+	err = decoder.Decode(&urlInFile)
 	if err != nil {
 		logger.Logger.Warn(err.Error())
 	}
 	for err == nil {
 		array = append(array, urlInFile)
-		err = decoder.Decode(urlInFile)
+		err = decoder.Decode(&urlInFile)
 		if err != nil {
 			logger.Logger.Warn(err.Error())
 		}

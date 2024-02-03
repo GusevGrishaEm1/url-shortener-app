@@ -14,7 +14,7 @@ type Claims struct {
 	UserID int
 }
 
-const SECRET_KEY = "secretkey"
+const SecretKey = "secretkey"
 
 type ShortenerService interface {
 	GetUserID(context.Context) int
@@ -70,7 +70,7 @@ func buildJWTString(userID int) (string, error) {
 			UserID:           userID,
 		},
 	)
-	tokenString, err := token.SignedString([]byte(SECRET_KEY))
+	tokenString, err := token.SignedString([]byte(SecretKey))
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +80,7 @@ func buildJWTString(userID int) (string, error) {
 func getUserIDFromToken(token string) (int, error) {
 	claims := &Claims{}
 	_, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
-		return []byte(SECRET_KEY), nil
+		return []byte(SecretKey), nil
 	})
 	if err != nil {
 		return 0, err

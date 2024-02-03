@@ -12,6 +12,7 @@ func main() {
 		panic(err)
 	}
 	config := parseFlagsAndEnv()
+	config.FileStoragePath = "db.json"
 	err := server.StartServer(config)
 	if err != nil {
 		panic(err)
