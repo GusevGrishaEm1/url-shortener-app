@@ -46,7 +46,7 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurityOnlyUserID(h http.Han
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		h(w, r.WithContext(context.WithValue(r.Context(), UserId, userID)))
+		h(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
 	}
 }
 
@@ -67,7 +67,7 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurity(h http.HandlerFunc) 
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		h(w, r.WithContext(context.WithValue(r.Context(), UserId, userID)))
+		h(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
 	}
 }
 
