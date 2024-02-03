@@ -9,35 +9,54 @@ import (
 
 func NewInMemoryStorage() *StorageInMemory {
 	return &StorageInMemory{
-		urls: make(map[string]string),
+		urls:        make(map[string]*models.URL),
+		urlsOfUsers: make(map[int][]*models.URL),
+		userIDSeq:   1,
 	}
 }
 
 type StorageInMemory struct {
-	urls map[string]string
+	urls        map[string]*models.URL
+	urlsOfUsers map[int][]*models.URL
+	userIDSeq   int
 }
 
-func (storage *StorageInMemory) FindByShortURL(_ context.Context, shortURL string) (*models.URLInfo, error) {
-	originalURL, ok := storage.urls[shortURL]
+func (storage *StorageInMemory) FindByShortURL(_ context.Context, shortURL string) (*models.URL, error) {
+	url, ok := storage.urls[shortURL]
 	if !ok {
 		return nil, errors.ErrOriginalURLNotFound
 	}
-	return &models.URLInfo{
+	return &models.URL{
 		ShortURL:    shortURL,
-		OriginalURL: originalURL,
+		OriginalURL: url.OriginalURL,
 	}, nil
 }
 
-func (storage *StorageInMemory) Save(_ context.Context, url models.URLInfo) error {
-	storage.urls[url.ShortURL] = url.OriginalURL
+func (storage *StorageInMemory) Save(ctx context.Context, url models.URL) error {
+	storage.saveSingleURLForUser(ctx, url)
+	storage.urls[url.ShortURL] = &url
 	return nil
 }
 
-func (storage *StorageInMemory) Ping(_ context.Context) bool {
-	return true
+func (storage *StorageInMemory) saveSingleURLForUser(ctx context.Context, url models.URL) {
+	if url.CreatedBy != 0 {
+		urls, ok := storage.urlsOfUsers[url.CreatedBy]
+		storage.userIDSeq++
+		if ok {
+			urls = append(urls, &url)
+			storage.urlsOfUsers[url.CreatedBy] = urls
+			return
+		}
+		storage.urlsOfUsers[url.CreatedBy] = make([]*models.URL, 1)
+		storage.urlsOfUsers[url.CreatedBy][0] = &url
+	}
 }
 
-func (storage *StorageInMemory) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+func (storage *StorageInMemory) Ping(_ context.Context) bool {
+	return storage.urls != nil
+}
+
+func (storage *StorageInMemory) SaveBatch(ctx context.Context, urls []models.URL) error {
 	for _, url := range urls {
 		err := storage.Save(ctx, url)
 		if err != nil {
@@ -45,4 +64,18 @@ func (storage *StorageInMemory) SaveBatch(ctx context.Context, urls []models.URL
 		}
 	}
 	return nil
+}
+
+func (storage *StorageInMemory) GetUserID(context.Context) int {
+	userID := storage.userIDSeq
+	storage.userIDSeq++
+	return userID
+}
+
+func (storage *StorageInMemory) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
+	urls, ok := storage.urlsOfUsers[userID]
+	if !ok {
+		return nil, errors.ErrOriginalURLNotFound
+	}
+	return urls, nil
 }

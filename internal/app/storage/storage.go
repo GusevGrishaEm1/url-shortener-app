@@ -20,10 +20,12 @@ const (
 )
 
 type Storage interface {
-	FindByShortURL(context.Context, string) (*models.URLInfo, error)
-	Save(context.Context, models.URLInfo) error
-	SaveBatch(context.Context, []models.URLInfo) error
+	FindByShortURL(context.Context, string) (*models.URL, error)
+	Save(context.Context, models.URL) error
+	SaveBatch(context.Context, []models.URL) error
 	Ping(context.Context) bool
+	FindByUser(context.Context, int) ([]*models.URL, error)
+	GetUserID(context.Context) int
 }
 
 func GetStorageTypeByConfig(config *config.Config) StorageType {

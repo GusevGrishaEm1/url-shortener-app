@@ -13,8 +13,8 @@ import (
 )
 
 type ShortenerServiceImpl struct {
-	config  *config.Config
-	mu      sync.Mutex
+	config *config.Config
+	sync.Mutex
 	storage storage.Storage
 }
 
@@ -27,8 +27,8 @@ func New(config *config.Config) (*ShortenerServiceImpl, error) {
 }
 
 func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, originalURL string) (string, error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.Lock()
+	defer service.Unlock()
 	if originalURL == "" {
 		return "", customerrors.ErrOriginalIsEmpty
 	}
@@ -36,9 +36,14 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, origina
 	if err != nil {
 		return "", err
 	}
-	err = service.storage.Save(ctx, models.URLInfo{
+	userID := 0
+	if user := ctx.Value("UserID"); user != nil {
+		userID = user.(int)
+	}
+	err = service.storage.Save(ctx, models.URL{
 		ShortURL:    shortURL,
 		OriginalURL: originalURL,
+		CreatedBy:   userID,
 	})
 	return shortURL, err
 }
@@ -60,8 +65,8 @@ func generateShortURL(ctx context.Context, service *ShortenerServiceImpl) (strin
 }
 
 func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL string) (string, error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.Lock()
+	defer service.Unlock()
 	url, err := service.storage.FindByShortURL(ctx, shortURL)
 	if err != nil {
 		return "", err
@@ -70,27 +75,32 @@ func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL
 }
 
 func (service *ShortenerServiceImpl) PingStorage(ctx context.Context) bool {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.Lock()
+	defer service.Unlock()
 	return service.storage.Ping(ctx)
 }
 
 func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.Lock()
+	defer service.Unlock()
 	if len(arr) == 0 {
 		return nil, customerrors.ErrOriginalIsEmpty
 	}
-	arrayToSave := make([]models.URLInfo, len(arr))
+	arrayToSave := make([]models.URL, len(arr))
 	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
+	userID := 0
+	if user := ctx.Value("UserID"); user != nil {
+		userID = user.(int)
+	}
 	for i, url := range arr {
 		shortURL, err := generateShortURL(ctx, service)
 		if err != nil {
 			return nil, err
 		}
-		arrayToSave[i] = models.URLInfo{
+		arrayToSave[i] = models.URL{
 			ShortURL:    shortURL,
 			OriginalURL: url.OriginalURL,
+			CreatedBy:   userID,
 		}
 		arrayToReturn[i] = models.ShortURLInfoBatch{
 			CorrelationID: url.CorrelationID,
@@ -102,4 +112,31 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 		return nil, err
 	}
 	return arrayToReturn, nil
+}
+
+func (service *ShortenerServiceImpl) GetUserID(ctx context.Context) int {
+	service.Lock()
+	defer service.Unlock()
+	return service.storage.GetUserID(ctx)
+}
+
+func (service *ShortenerServiceImpl) GetUrlsByUser(ctx context.Context) ([]models.URLByUser, error) {
+	service.Lock()
+	defer service.Unlock()
+	userID := 0
+	if user := ctx.Value("UserID"); user != nil {
+		userID = user.(int)
+	}
+	if urls, err := service.storage.FindByUser(ctx, userID); err == nil {
+		urlsForUser := make([]models.URLByUser, len(urls))
+		for i, el := range urls {
+			urlsForUser[i] = models.URLByUser{
+				ShortURL:    el.ShortURL,
+				OriginalURL: el.OriginalURL,
+			}
+		}
+		return urlsForUser, nil
+	} else {
+		return nil, err
+	}
 }

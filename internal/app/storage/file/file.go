@@ -3,8 +3,6 @@ package file
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
 	"os"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
@@ -13,46 +11,59 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 )
 
+type StorageFile struct {
+	filePath  string
+	uuidSeq   int
+	userIDSeq int
+}
+
+type URLInFile struct {
+	UUID        int    `json:"uuid"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+	CreatedBy   int    `json:"created_by"`
+}
+
 func NewFileStorage(config *config.Config) (*StorageFile, error) {
 	storage := &StorageFile{
 		filePath: config.FileStoragePath,
 	}
-	storage.setUUIDSeqFromFile()
+	storage.setSeqFromFile()
 	return storage, nil
 }
 
-type StorageFile struct {
-	filePath string
-	uuidSeq  int
-}
-
-func (storage *StorageFile) setUUIDSeqFromFile() {
+func (storage *StorageFile) setSeqFromFile() {
 	uuidSeq := 1
+	userIDSeq := 1
 	urlsFromFile := storage.loadFromFile()
 	for _, el := range urlsFromFile {
 		if uuidSeq <= el.UUID {
 			uuidSeq = el.UUID + 1
 		}
+		if userIDSeq <= el.CreatedBy {
+			userIDSeq = el.CreatedBy + 1
+		}
 	}
 	storage.uuidSeq = uuidSeq
+	storage.userIDSeq = userIDSeq
 }
 
-func (storage *StorageFile) loadFromFile() []models.URLInfo {
-	var urlInfo models.URLInfo
-	array := make([]models.URLInfo, 0)
+func (storage *StorageFile) loadFromFile() []*URLInFile {
+	var urlInFile *URLInFile
+	array := make([]*URLInFile, 0)
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return array
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&urlInfo)
+	err = decoder.Decode(urlInFile)
 	if err != nil {
 		logger.Logger.Warn(err.Error())
 	}
 	for err == nil {
-		array = append(array, urlInfo)
-		err = decoder.Decode(&urlInfo)
+		array = append(array, urlInFile)
+		err = decoder.Decode(urlInFile)
 		if err != nil {
 			logger.Logger.Warn(err.Error())
 		}
@@ -60,48 +71,34 @@ func (storage *StorageFile) loadFromFile() []models.URLInfo {
 	return array
 }
 
-func (storage *StorageFile) Save(_ context.Context, url models.URLInfo) error {
+func (storage *StorageFile) Save(ctx context.Context, url models.URL) error {
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)
-	url.UUID = storage.uuidSeq
+	urlInFile := &URLInFile{
+		UUID:        storage.uuidSeq,
+		ShortURL:    url.ShortURL,
+		OriginalURL: url.OriginalURL,
+		CreatedBy:   url.CreatedBy,
+	}
 	storage.uuidSeq++
-	return encoder.Encode(url)
+	return encoder.Encode(urlInFile)
 }
 
-func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (*models.URLInfo, error) {
-	file, err := os.OpenFile(storage.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	var url models.URLInfo
-	err = decoder.Decode(&url)
-	if url.ShortURL == shortURL {
-		return &url, nil
-	}
-	if err != nil {
-		logger.Logger.Warn(err.Error())
-		if errors.Is(err, io.EOF) {
-			return nil, customerrors.ErrOriginalURLNotFound
-		}
-		return nil, err
-	}
-	for err == nil {
-		err = decoder.Decode(&url)
-		if url.ShortURL == shortURL {
-			return &url, nil
-		}
-		if err != nil {
-			logger.Logger.Warn(err.Error())
-			if errors.Is(err, io.EOF) {
-				return nil, customerrors.ErrOriginalURLNotFound
+func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (*models.URL, error) {
+	urlsInFile := storage.loadFromFile()
+	for _, el := range urlsInFile {
+		if el.ShortURL == shortURL {
+			url := &models.URL{
+				ID:          el.UUID,
+				ShortURL:    el.ShortURL,
+				OriginalURL: el.OriginalURL,
+				CreatedBy:   el.CreatedBy,
 			}
-			return nil, err
+			return url, nil
 		}
 	}
 	return nil, customerrors.ErrOriginalURLNotFound
@@ -116,7 +113,7 @@ func (storage *StorageFile) Ping(_ context.Context) bool {
 	return true
 }
 
-func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URL) error {
 	for _, url := range urls {
 		err := storage.Save(ctx, url)
 		if err != nil {
@@ -124,4 +121,29 @@ func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URLInfo
 		}
 	}
 	return nil
+}
+
+func (storage *StorageFile) GetUserID(context.Context) int {
+	userID := storage.userIDSeq
+	storage.userIDSeq++
+	return userID
+}
+
+func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
+	urlsInFile := storage.loadFromFile()
+	urls := make([]*models.URL, 0)
+	for _, el := range urlsInFile {
+		if el.CreatedBy == userID {
+			urls = append(urls, &models.URL{
+				ID:          el.UUID,
+				ShortURL:    el.ShortURL,
+				OriginalURL: el.OriginalURL,
+				CreatedBy:   el.CreatedBy,
+			})
+		}
+	}
+	if len(urls) > 0 {
+		return urls, nil
+	}
+	return nil, customerrors.ErrOriginalURLNotFound
 }

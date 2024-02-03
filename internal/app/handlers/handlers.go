@@ -10,7 +10,6 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 )
 
 type ShortenerService interface {
@@ -18,6 +17,7 @@ type ShortenerService interface {
 	CreateBatchShortURL(ctx context.Context, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error)
 	GetByShortURL(ctx context.Context, shortURL string) (string, error)
 	PingStorage(ctx context.Context) bool
+	GetUrlsByUser(ctx context.Context) ([]models.URLByUser, error)
 }
 
 type ShortenerHandlerImpl struct {
@@ -25,16 +25,15 @@ type ShortenerHandlerImpl struct {
 	serverConfig *config.Config
 }
 
-func New(config *config.Config) (*ShortenerHandlerImpl, error) {
-	service, err := service.New(config)
+func New(config *config.Config, service ShortenerService) *ShortenerHandlerImpl {
 	return &ShortenerHandlerImpl{
 		service:      service,
 		serverConfig: config,
-	}, err
+	}
 }
 
 func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -59,7 +58,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 }
 
 func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -106,7 +105,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 }
 
 func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 	originalURL, err := handler.service.GetByShortURL(ctx, req.URL.Path[1:])
 	if err != nil {
@@ -118,7 +117,7 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 }
 
 func (handler *ShortenerHandlerImpl) PingStorageHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 	ok := handler.service.PingStorage(ctx)
 	if !ok {
@@ -129,7 +128,7 @@ func (handler *ShortenerHandlerImpl) PingStorageHandler(res http.ResponseWriter,
 }
 
 func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(req.Context())
 	defer cancel()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -167,5 +166,27 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	}
 	res.Header().Add("content-type", "application/json")
 	res.WriteHeader(http.StatusCreated)
+	res.Write(body)
+}
+
+func (handler *ShortenerHandlerImpl) UrlsByUserHandler(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+	urls, err := handler.service.GetUrlsByUser(ctx)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(urls) == 0 {
+		res.WriteHeader(http.StatusNoContent)
+		return
+	}
+	body, err := json.Marshal(urls)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.Header().Add("content-type", "application/json")
+	res.WriteHeader(http.StatusOK)
 	res.Write(body)
 }

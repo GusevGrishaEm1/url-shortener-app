@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Request struct {
 	URL string `json:"url"`
 }
@@ -22,4 +24,18 @@ type ShortURLInfoBatch struct {
 type OriginalURLInfoBatch struct {
 	CorrelationID string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
+}
+
+type URLByUser struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
+// storage model
+type URL struct {
+	ID          int
+	ShortURL    string
+	OriginalURL string
+	CreatedBy   int
+	CreatedTs   time.Time
 }

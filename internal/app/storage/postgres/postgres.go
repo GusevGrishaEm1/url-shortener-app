@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
@@ -10,6 +11,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type StoragePostgres struct {
+	databaseURL string
+	pool        *pgxpool.Pool
+	userIDSeq   int
+}
 
 func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
 	pool, err := pgxpool.New(context.TODO(), config.DatabaseURL)
@@ -20,20 +27,21 @@ func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
 		databaseURL: config.DatabaseURL,
 		pool:        pool,
 	}
-	err = storage.createTables(config.DatabaseURL)
+	if err := storage.createTables(config.DatabaseURL); err != nil {
+		return nil, err
+	}
+	if err := storage.setUserIDSeq(config.DatabaseURL); err != nil {
+		return nil, err
+	}
 	return storage, err
-}
-
-type StoragePostgres struct {
-	databaseURL string
-	pool        *pgxpool.Pool
 }
 
 func (storage *StoragePostgres) createTables(databaseURL string) error {
 	query := `
 		create table if not exists urls (
 			id serial primary key,
-			create_ts timestamp default now(),
+			created_by int,
+			created_ts timestamp default now(),
 			short_url varchar unique not null,
 			original_url varchar unique not null
 		);
@@ -45,7 +53,17 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 	return nil
 }
 
-func (storage *StoragePostgres) Save(ctx context.Context, url models.URLInfo) error {
+func (storage *StoragePostgres) setUserIDSeq(databaseURL string) error {
+	query := `
+		select coalesce(max(created_by), 0) + 1 from urls
+	`
+	var userID int
+	err := storage.pool.QueryRow(context.TODO(), query).Scan(&userID)
+	storage.userIDSeq = userID
+	return err
+}
+
+func (storage *StoragePostgres) Save(ctx context.Context, url models.URL) error {
 	query := getInsertQuery()
 	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
@@ -65,7 +83,7 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URLInfo) er
 	return nil
 }
 
-func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URLInfo) error {
+func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL) error {
 	query := getInsertQuery()
 	batch := &pgx.Batch{}
 	var queueQuery *pgx.QueuedQuery
@@ -110,10 +128,10 @@ func getInsertQuery() string {
 	`
 }
 
-func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URLInfo, error) {
+func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URL, error) {
 	query := "select id, short_url, original_url from urls where short_url = $1"
-	var url models.URLInfo
-	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&url.UUID, &url.ShortURL, &url.OriginalURL)
+	var url models.URL
+	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&url.ID, &url.ShortURL, &url.OriginalURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, customerrors.ErrOriginalURLNotFound
@@ -125,4 +143,31 @@ func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL str
 
 func (storage *StoragePostgres) Ping(ctx context.Context) bool {
 	return storage.pool.Ping(ctx) == nil
+}
+
+func (storage *StoragePostgres) GetUserID(context.Context) int {
+	userID := storage.userIDSeq
+	storage.userIDSeq++
+	return userID
+}
+
+func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
+	query := "select id, short_url, original_url from urls where created_by = $1"
+	rows, err := storage.pool.Query(ctx, query, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, customerrors.ErrOriginalURLNotFound
+		}
+		return nil, err
+	}
+	urls := make([]*models.URL, 0)
+	for rows.Next() {
+		url := &models.URL{}
+		err := rows.Scan(url.ID, url.ShortURL, url.OriginalURL)
+		if err != nil {
+			return nil, fmt.Errorf("unable to scan row: %w", err)
+		}
+		urls = append(urls, url)
+	}
+	return urls, nil
 }

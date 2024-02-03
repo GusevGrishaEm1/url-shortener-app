@@ -8,13 +8,11 @@ import (
 )
 
 func main() {
-	var err error
-	err = logger.Init(slog.LevelInfo)
-	if err != nil {
+	if err := logger.Init(slog.LevelInfo); err != nil {
 		panic(err)
 	}
 	config := parseFlagsAndEnv()
-	err = server.StartServer(config)
+	err := server.StartServer(config)
 	if err != nil {
 		panic(err)
 	}
