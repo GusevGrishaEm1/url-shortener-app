@@ -37,5 +37,5 @@ type URL struct {
 	ShortURL    string
 	OriginalURL string
 	CreatedBy   int
-	CreatedTs   time.Time
+	CreatedTS   time.Time
 }
