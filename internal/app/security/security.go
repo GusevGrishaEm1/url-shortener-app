@@ -14,8 +14,6 @@ type Claims struct {
 	UserID int
 }
 
-const SecretKey = "secretkey"
-
 type ShortenerService interface {
 	GetUserID(context.Context) int
 }
@@ -59,6 +57,10 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurity(h http.HandlerFunc) 
 			http.SetCookie(w, cookie)
 		}
 		userID, err := getUserIDFromToken(cookie.Value)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		h(w, r.WithContext(context.WithValue(r.Context(), "UserID", userID)))
 	}
 }
@@ -70,7 +72,7 @@ func buildJWTString(userID int) (string, error) {
 			UserID:           userID,
 		},
 	)
-	tokenString, err := token.SignedString([]byte(SecretKey))
+	tokenString, err := token.SignedString([]byte("secretkey"))
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +82,7 @@ func buildJWTString(userID int) (string, error) {
 func getUserIDFromToken(token string) (int, error) {
 	claims := &Claims{}
 	_, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
-		return []byte(SecretKey), nil
+		return []byte("secretkey"), nil
 	})
 	if err != nil {
 		return 0, err
