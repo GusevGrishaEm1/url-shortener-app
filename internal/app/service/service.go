@@ -132,7 +132,7 @@ func (service *ShortenerServiceImpl) GetUrlsByUser(ctx context.Context) ([]model
 		urlsForUser := make([]models.URLByUser, len(urls))
 		for i, el := range urls {
 			urlsForUser[i] = models.URLByUser{
-				ShortURL:    el.ShortURL,
+				ShortURL:    service.config.BaseReturnURL + "/" + el.ShortURL,
 				OriginalURL: el.OriginalURL,
 			}
 		}

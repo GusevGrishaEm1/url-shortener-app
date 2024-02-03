@@ -162,12 +162,12 @@ func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*
 	}
 	urls := make([]*models.URL, 0)
 	for rows.Next() {
-		url := &models.URL{}
-		err := rows.Scan(url.ID, url.ShortURL, url.OriginalURL)
+		url := models.URL{}
+		err := rows.Scan(&url.ID, &url.ShortURL, &url.OriginalURL)
 		if err != nil {
 			return nil, fmt.Errorf("unable to scan row: %w", err)
 		}
-		urls = append(urls, url)
+		urls = append(urls, &url)
 	}
 	return urls, nil
 }
