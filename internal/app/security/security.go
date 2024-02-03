@@ -38,7 +38,7 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurityOnlyUserID(h http.Han
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("UserID")
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		userID, err := getUserIDFromToken(cookie.Value)
