@@ -17,7 +17,7 @@ type Claims struct {
 type UserInfo string
 
 const (
-	UserId UserInfo = "UserID"
+	UserID UserInfo = "UserID"
 )
 
 type ShortenerService interface {
