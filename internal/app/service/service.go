@@ -8,6 +8,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/security"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/util"
 )
@@ -37,7 +38,7 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, origina
 		return "", err
 	}
 	userID := 0
-	if user := ctx.Value("UserID"); user != nil {
+	if user := ctx.Value(security.UserId); user != nil {
 		userID = user.(int)
 	}
 	err = service.storage.Save(ctx, models.URL{
@@ -89,7 +90,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 	arrayToSave := make([]models.URL, len(arr))
 	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
 	userID := 0
-	if user := ctx.Value("UserID"); user != nil {
+	if user := ctx.Value(security.UserId); user != nil {
 		userID = user.(int)
 	}
 	for i, url := range arr {
@@ -124,7 +125,7 @@ func (service *ShortenerServiceImpl) GetUrlsByUser(ctx context.Context) ([]model
 	service.Lock()
 	defer service.Unlock()
 	userID := 0
-	if user := ctx.Value("UserID"); user != nil {
+	if user := ctx.Value(security.UserId); user != nil {
 		userID = user.(int)
 	}
 	if urls, err := service.storage.FindByUser(ctx, userID); err == nil {

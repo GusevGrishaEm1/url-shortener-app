@@ -70,7 +70,7 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URL) error 
 		return err
 	}
 	var shortURL string
-	err = tr.QueryRow(ctx, query, url.ShortURL, url.OriginalURL).Scan(&shortURL)
+	err = tr.QueryRow(ctx, query, url.ShortURL, url.OriginalURL, url.CreatedBy).Scan(&shortURL)
 	if shortURL != "" {
 		tr.Rollback(ctx)
 		return customerrors.NewErrOriginalURLAlreadyExists(shortURL)
@@ -88,7 +88,7 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 	batch := &pgx.Batch{}
 	var queueQuery *pgx.QueuedQuery
 	for _, el := range urls {
-		queueQuery = batch.Queue(query, el.ShortURL, el.OriginalURL)
+		queueQuery = batch.Queue(query, el.ShortURL, el.OriginalURL, el.CreatedBy)
 	}
 	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
@@ -117,7 +117,7 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 func getInsertQuery() string {
 	return `
 	with new_id as (
-		insert into urls(short_url, original_url) values($1, $2)
+		insert into urls(short_url, original_url, created_by) values($1, $2, $3)
 		on conflict(original_url) do nothing
 		returning id
 	) select
