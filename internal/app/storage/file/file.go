@@ -153,9 +153,9 @@ func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*mode
 func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDelete, userID int) error {
 	urlsFromFile := storage.loadFromFile()
 	for _, url := range urls {
-		for _, urlFromFile := range urlsFromFile {
+		for i, urlFromFile := range urlsFromFile {
 			if string(url) == urlFromFile.ShortURL && urlFromFile.CreatedBy == userID {
-				urlFromFile.IsDeleted = true
+				urlsFromFile[i].IsDeleted = true
 			}
 		}
 	}
