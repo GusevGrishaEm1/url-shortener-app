@@ -164,7 +164,7 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, urls 
 			if len(urlsToDelete) == 0 {
 				continue
 			}
-			err := service.deleteUrlBatch(ctx, urlsToDelete)
+			err := service.deleteURLBatch(ctx, urlsToDelete)
 			urlsToDelete = make([]models.URLToDelete, 0)
 			if err != nil {
 				continue
@@ -173,6 +173,6 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, urls 
 	}
 }
 
-func (service *ShortenerServiceImpl) deleteUrlBatch(ctx context.Context, urls []models.URLToDelete) error {
+func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context, urls []models.URLToDelete) error {
 	return service.storage.DeleteUrls(ctx, urls, service.getUserID(ctx))
 }

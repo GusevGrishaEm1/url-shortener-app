@@ -53,7 +53,7 @@ func (storage *StorageInMemory) saveSingleURLForUser(ctx context.Context, url mo
 }
 
 func (storage *StorageInMemory) Ping(_ context.Context) bool {
-	return storage.urls != nil
+	return true
 }
 
 func (storage *StorageInMemory) SaveBatch(ctx context.Context, urls []models.URL) error {
@@ -84,8 +84,7 @@ func (storage *StorageInMemory) DeleteUrls(_ context.Context, urls []models.URLT
 	for _, url := range urls {
 		el, ok := storage.urls[string(url)]
 		if ok && el.CreatedBy == userID {
-			el.IsDeleted = true
-			storage.urls[string(url)] = el
+			storage.urls[string(url)].IsDeleted = true
 		}
 	}
 	return nil

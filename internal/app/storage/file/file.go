@@ -98,6 +98,7 @@ func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (
 				ShortURL:    el.ShortURL,
 				OriginalURL: el.OriginalURL,
 				CreatedBy:   el.CreatedBy,
+				IsDeleted:   el.IsDeleted,
 			}
 			return url, nil
 		}
