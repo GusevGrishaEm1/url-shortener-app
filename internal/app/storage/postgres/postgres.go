@@ -45,7 +45,7 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 			created_ts timestamp default now(),
 			short_url varchar unique not null,
 			original_url varchar unique not null,
-			is_deleted bool,
+			is_deleted bool
 		);
 	`
 	_, err := storage.pool.Exec(context.TODO(), query)
