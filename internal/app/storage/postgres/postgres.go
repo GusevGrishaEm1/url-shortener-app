@@ -131,9 +131,9 @@ func getInsertQuery() string {
 }
 
 func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URL, error) {
-	query := "select id, short_url, original_url from urls where short_url = $1"
+	query := "select id, short_url, original_url, is_deleted from urls where short_url = $1"
 	var url models.URL
-	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&url.ID, &url.ShortURL, &url.OriginalURL)
+	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&url.ID, &url.ShortURL, &url.OriginalURL, &url.IsDeleted)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, customerrors.ErrOriginalURLNotFound
