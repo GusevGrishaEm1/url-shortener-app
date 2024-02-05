@@ -79,3 +79,14 @@ func (storage *StorageInMemory) FindByUser(ctx context.Context, userID int) ([]*
 	}
 	return urls, nil
 }
+
+func (storage *StorageInMemory) DeleteUrls(_ context.Context, urls []models.URLToDelete, userID int) error {
+	for _, url := range urls {
+		el, ok := storage.urls[string(url)]
+		if ok && el.CreatedBy == userID {
+			el.IsDeleted = true
+			storage.urls[string(url)] = el
+		}
+	}
+	return nil
+}

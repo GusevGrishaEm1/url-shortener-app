@@ -19,6 +19,7 @@ type ShortenerHandler interface {
 	ExpandHandler(res http.ResponseWriter, req *http.Request)
 	PingStorageHandler(res http.ResponseWriter, req *http.Request)
 	UrlsByUserHandler(res http.ResponseWriter, req *http.Request)
+	DeleteUrlsHandler(res http.ResponseWriter, req *http.Request)
 }
 
 type SecurityHandler interface {
@@ -46,5 +47,6 @@ func initHandlers(serverConfig *config.Config, handlers ShortenerHandler, secHan
 	r.Post("/api/shorten/batch", secHandler.RequestSecurity(gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenJSONBatchHandler))))
 	r.Get("/ping", secHandler.RequestSecurity(gzipreq.RequestZipper(logger.RequestLogger(handlers.PingStorageHandler))))
 	r.Get("/api/user/urls", secHandler.RequestSecurityOnlyUserID(gzipreq.RequestZipper(logger.RequestLogger(handlers.UrlsByUserHandler))))
+	r.Delete("/api/user/urls", secHandler.RequestSecurityOnlyUserID(gzipreq.RequestZipper(logger.RequestLogger(handlers.DeleteUrlsHandler))))
 	return r
 }

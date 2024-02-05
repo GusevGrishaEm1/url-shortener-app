@@ -18,6 +18,7 @@ type ShortenerService interface {
 	GetByShortURL(ctx context.Context, shortURL string) (string, error)
 	PingStorage(ctx context.Context) bool
 	GetUrlsByUser(ctx context.Context) ([]models.URLByUser, error)
+	DeleteUrlsByUser(ctx context.Context, urls []models.URLToDelete) error
 }
 
 type ShortenerHandlerImpl struct {
@@ -109,6 +110,10 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 	defer cancel()
 	originalURL, err := handler.service.GetByShortURL(ctx, req.URL.Path[1:])
 	if err != nil {
+		if errors.Is(err, customerrors.ErrOriginalURLIsDeleted) {
+			res.WriteHeader(http.StatusGone)
+			return
+		}
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -189,4 +194,24 @@ func (handler *ShortenerHandlerImpl) UrlsByUserHandler(res http.ResponseWriter, 
 	res.Header().Add("content-type", "application/json")
 	res.WriteHeader(http.StatusOK)
 	res.Write(body)
+}
+
+func (handler *ShortenerHandlerImpl) DeleteUrlsHandler(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithCancel(req.Context())
+	defer cancel()
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var urls []models.URLToDelete
+	if err := json.Unmarshal(body, &urls); err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := handler.service.DeleteUrlsByUser(ctx, urls); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusAccepted)
 }

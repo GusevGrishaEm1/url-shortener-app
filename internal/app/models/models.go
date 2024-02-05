@@ -31,6 +31,8 @@ type URLByUser struct {
 	OriginalURL string `json:"original_url"`
 }
 
+type URLToDelete string
+
 // storage model
 type URL struct {
 	ID          int
@@ -38,4 +40,5 @@ type URL struct {
 	OriginalURL string
 	CreatedBy   int
 	CreatedTS   time.Time
+	IsDeleted   bool
 }

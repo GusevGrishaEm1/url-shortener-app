@@ -22,6 +22,7 @@ type URLInFile struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 	CreatedBy   int    `json:"created_by"`
+	IsDeleted   bool   `json:"is_deleted"`
 }
 
 func NewFileStorage(config *config.Config) (*StorageFile, error) {
@@ -146,4 +147,25 @@ func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*mode
 		return urls, nil
 	}
 	return nil, customerrors.ErrOriginalURLNotFound
+}
+
+func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDelete, userID int) error {
+	urlsFromFile := storage.loadFromFile()
+	for _, url := range urls {
+		for _, urlFromFile := range urlsFromFile {
+			if string(url) == urlFromFile.ShortURL && urlFromFile.CreatedBy == userID {
+				urlFromFile.IsDeleted = true
+			}
+		}
+	}
+	file, err := os.OpenFile(storage.filePath, os.O_RDWR, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	for _, url := range urlsFromFile {
+		encoder := json.NewEncoder(file)
+		encoder.Encode(url)
+	}
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
@@ -17,6 +18,7 @@ type ShortenerServiceImpl struct {
 	config *config.Config
 	sync.Mutex
 	storage storage.Storage
+	ch      chan models.URLToDelete
 }
 
 func New(config *config.Config) (*ShortenerServiceImpl, error) {
@@ -24,6 +26,7 @@ func New(config *config.Config) (*ShortenerServiceImpl, error) {
 	return &ShortenerServiceImpl{
 		config:  config,
 		storage: storage,
+		ch:      make(chan models.URLToDelete, 1024),
 	}, err
 }
 
@@ -72,6 +75,9 @@ func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL
 	if err != nil {
 		return "", err
 	}
+	if url.IsDeleted {
+		return "", customerrors.ErrOriginalURLIsDeleted
+	}
 	return url.OriginalURL, nil
 }
 
@@ -89,10 +95,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, ar
 	}
 	arrayToSave := make([]models.URL, len(arr))
 	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
-	userID := 0
-	if user := ctx.Value(security.UserID); user != nil {
-		userID = user.(int)
-	}
+	userID := service.getUserID(ctx)
 	for i, url := range arr {
 		shortURL, err := generateShortURL(ctx, service)
 		if err != nil {
@@ -124,20 +127,52 @@ func (service *ShortenerServiceImpl) GetUserID(ctx context.Context) int {
 func (service *ShortenerServiceImpl) GetUrlsByUser(ctx context.Context) ([]models.URLByUser, error) {
 	service.Lock()
 	defer service.Unlock()
+	userID := service.getUserID(ctx)
+	urls, err := service.storage.FindByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	urlsForUser := make([]models.URLByUser, len(urls))
+	for i, el := range urls {
+		urlsForUser[i] = models.URLByUser{
+			ShortURL:    service.config.BaseReturnURL + "/" + el.ShortURL,
+			OriginalURL: el.OriginalURL,
+		}
+	}
+	return urlsForUser, nil
+}
+
+func (*ShortenerServiceImpl) getUserID(ctx context.Context) int {
 	userID := 0
 	if user := ctx.Value(security.UserID); user != nil {
 		userID = user.(int)
 	}
-	if urls, err := service.storage.FindByUser(ctx, userID); err == nil {
-		urlsForUser := make([]models.URLByUser, len(urls))
-		for i, el := range urls {
-			urlsForUser[i] = models.URLByUser{
-				ShortURL:    service.config.BaseReturnURL + "/" + el.ShortURL,
-				OriginalURL: el.OriginalURL,
+	return userID
+}
+
+func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, urls []models.URLToDelete) error {
+	ticker := time.NewTicker(10 * time.Second)
+	for _, el := range urls {
+		service.ch <- el
+	}
+	urlsToDelete := make([]models.URLToDelete, 0)
+	for {
+		select {
+		case url := <-service.ch:
+			urlsToDelete = append(urlsToDelete, url)
+		case <-ticker.C:
+			if len(urlsToDelete) == 0 {
+				continue
+			}
+			err := service.deleteUrlBatch(ctx, urlsToDelete)
+			urlsToDelete = make([]models.URLToDelete, 0)
+			if err != nil {
+				continue
 			}
 		}
-		return urlsForUser, nil
-	} else {
-		return nil, err
 	}
+}
+
+func (service *ShortenerServiceImpl) deleteUrlBatch(ctx context.Context, urls []models.URLToDelete) error {
+	return service.storage.DeleteUrls(ctx, urls, service.getUserID(ctx))
 }

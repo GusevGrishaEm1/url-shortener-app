@@ -9,6 +9,7 @@ import (
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -43,7 +44,8 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 			created_by int,
 			created_ts timestamp default now(),
 			short_url varchar unique not null,
-			original_url varchar unique not null
+			original_url varchar unique not null,
+			is_deleted bool,
 		);
 	`
 	_, err := storage.pool.Exec(context.TODO(), query)
@@ -170,4 +172,29 @@ func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*
 		urls = append(urls, &url)
 	}
 	return urls, nil
+}
+
+func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.URLToDelete, userID int) error {
+	query := "update urls set is_deleted = true where short_url = $1"
+	batch := &pgx.Batch{}
+	var queueQuery *pgx.QueuedQuery
+	for _, url := range urls {
+		queueQuery = batch.Queue(query, string(url))
+	}
+	tr, err := storage.pool.Begin(ctx)
+	if err != nil {
+		tr.Rollback(ctx)
+		return err
+	}
+	queueQuery.Exec(func(ct pgconn.CommandTag) error {
+		return nil
+	})
+	res := tr.SendBatch(ctx, batch)
+	err = res.Close()
+	if err != nil {
+		tr.Rollback(ctx)
+		return err
+	}
+	tr.Commit(ctx)
+	return nil
 }

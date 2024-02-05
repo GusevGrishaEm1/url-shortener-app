@@ -26,6 +26,7 @@ type Storage interface {
 	Ping(context.Context) bool
 	FindByUser(context.Context, int) ([]*models.URL, error)
 	GetUserID(context.Context) int
+	DeleteUrls(context.Context, []models.URLToDelete, int) error
 }
 
 func GetStorageTypeByConfig(config *config.Config) StorageType {
