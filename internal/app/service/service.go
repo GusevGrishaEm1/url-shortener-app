@@ -23,11 +23,16 @@ type ShortenerServiceImpl struct {
 
 func New(config *config.Config) (*ShortenerServiceImpl, error) {
 	storage, err := storage.New(storage.GetStorageTypeByConfig(config), config)
-	return &ShortenerServiceImpl{
+	if err != nil {
+		return nil, err
+	}
+	service := &ShortenerServiceImpl{
 		config:  config,
 		storage: storage,
 		ch:      make(chan models.URLToDelete, 1024),
-	}, err
+	}
+	go service.deleteURLBatch()
+	return service, nil
 }
 
 func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, originalURL string) (string, error) {
@@ -151,10 +156,18 @@ func (*ShortenerServiceImpl) getUserID(ctx context.Context) int {
 }
 
 func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, urls []models.URLToDelete) error {
-	ticker := time.NewTicker(10 * time.Second)
+	service.Lock()
+	defer service.Unlock()
 	for _, el := range urls {
 		service.ch <- el
 	}
+	return nil
+}
+
+func (service *ShortenerServiceImpl) deleteURLBatch() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ticker := time.NewTicker(10 * time.Second)
 	urlsToDelete := make([]models.URLToDelete, 0)
 	for {
 		select {
@@ -164,15 +177,11 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, urls 
 			if len(urlsToDelete) == 0 {
 				continue
 			}
-			err := service.deleteURLBatch(ctx, urlsToDelete)
+			err := service.storage.DeleteUrls(ctx, urlsToDelete, service.getUserID(ctx))
 			urlsToDelete = make([]models.URLToDelete, 0)
 			if err != nil {
 				continue
 			}
 		}
 	}
-}
-
-func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context, urls []models.URLToDelete) error {
-	return service.storage.DeleteUrls(ctx, urls, service.getUserID(ctx))
 }
