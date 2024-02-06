@@ -1,28 +1,8 @@
 package errors
 
 import (
-	"errors"
+	"net/http"
 )
-
-var (
-	ErrOriginalIsEmpty      = errors.New("original url is empty")
-	ErrOriginalURLNotFound  = errors.New("original url isn't found")
-	ErrOriginalURLIsDeleted = errors.New("original url is deleted")
-)
-
-type OriginalURLAlreadyExists struct {
-	ShortURL string
-}
-
-func (err *OriginalURLAlreadyExists) Error() string {
-	return "original url already exists"
-}
-
-func NewErrOriginalURLAlreadyExists(shortURL string) *OriginalURLAlreadyExists {
-	return &OriginalURLAlreadyExists{
-		ShortURL: shortURL,
-	}
-}
 
 type CustomError struct {
 	Err         error
@@ -35,14 +15,22 @@ func (customErr CustomError) Error() string {
 	return customErr.Err.Error()
 }
 
-func NewCustomErrorWithMessage(message string) *CustomError {
-	return &CustomError{
-		Err: errors.New(message),
-	}
-}
-
 func NewCustomError(err error) *CustomError {
 	return &CustomError{
 		Err: err,
+	}
+}
+
+func NewCustomErrorInternal(err error) *CustomError {
+	return &CustomError{
+		Err:    err,
+		Status: http.StatusInternalServerError,
+	}
+}
+
+func NewCustomErrorBadRequest(err error) *CustomError {
+	return &CustomError{
+		Err:    err,
+		Status: http.StatusBadRequest,
 	}
 }

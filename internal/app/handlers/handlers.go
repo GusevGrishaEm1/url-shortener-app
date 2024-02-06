@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 
@@ -43,14 +42,14 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	}
 	shortURL, err := handler.service.CreateShortURL(ctx, string(body))
 	if err != nil {
-		var cusErr *customerrors.OriginalURLAlreadyExists
-		if errors.As(err, &cusErr) {
-			res.Header().Add("content-type", "text/plain")
-			res.WriteHeader(http.StatusConflict)
-			res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + err.(*customerrors.OriginalURLAlreadyExists).ShortURL))
-			return
+		customerr := err.(*customerrors.CustomError)
+		if customerr.ContentType != "" {
+			res.Header().Add("content-type", customerr.ContentType)
 		}
-		res.WriteHeader(http.StatusBadRequest)
+		res.WriteHeader(customerr.Status)
+		if customerr.Body != nil {
+			res.Write(customerr.Body)
+		}
 		return
 	}
 	res.Header().Add("content-type", "text/plain")
@@ -74,22 +73,14 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	}
 	shortURL, err := handler.service.CreateShortURL(ctx, reqModel.URL)
 	if err != nil {
-		var cusErr *customerrors.OriginalURLAlreadyExists
-		if errors.As(err, &cusErr) {
-			resModel := models.Response{
-				Result: handler.serverConfig.BaseReturnURL + "/" + err.(*customerrors.OriginalURLAlreadyExists).ShortURL,
-			}
-			body, err = json.Marshal(resModel)
-			if err != nil {
-				res.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			res.Header().Add("content-type", "application/json")
-			res.WriteHeader(http.StatusConflict)
-			res.Write(body)
-			return
+		customerr := err.(*customerrors.CustomError)
+		if customerr.ContentType != "" {
+			res.Header().Add("content-type", customerr.ContentType)
 		}
-		res.WriteHeader(http.StatusBadRequest)
+		res.WriteHeader(customerr.Status)
+		if customerr.Body != nil {
+			res.Write(customerr.Body)
+		}
 		return
 	}
 	resModel := models.Response{
@@ -97,7 +88,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	}
 	body, err = json.Marshal(resModel)
 	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
+		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	res.Header().Add("content-type", "application/json")
@@ -110,12 +101,14 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 	defer cancel()
 	originalURL, err := handler.service.GetByShortURL(ctx, req.URL.Path[1:])
 	if err != nil {
-		if errors.Is(err, customerrors.ErrOriginalURLIsDeleted) {
-			res.WriteHeader(http.StatusGone)
-			return
+		customerr := err.(*customerrors.CustomError)
+		if customerr.ContentType != "" {
+			res.Header().Add("content-type", customerr.ContentType)
 		}
-		res.WriteHeader(http.StatusBadRequest)
-		return
+		res.WriteHeader(customerr.Status)
+		if customerr.Body != nil {
+			res.Write(customerr.Body)
+		}
 	}
 	res.Header().Add("Location", originalURL)
 	res.WriteHeader(http.StatusTemporaryRedirect)
@@ -148,21 +141,15 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	}
 	shortURLArray, err := handler.service.CreateBatchShortURL(ctx, urls)
 	if err != nil {
-		var cusErr *customerrors.OriginalURLAlreadyExists
-		if errors.As(err, &cusErr) {
-			resModel := models.Response{
-				Result: handler.serverConfig.BaseReturnURL + "/" + err.(*customerrors.OriginalURLAlreadyExists).ShortURL,
-			}
-			body, err = json.Marshal(resModel)
-			if err != nil {
-				res.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			res.Header().Add("content-type", "application/json")
-			res.WriteHeader(http.StatusConflict)
-			res.Write(body)
-			return
+		customerr := err.(*customerrors.CustomError)
+		if customerr.ContentType != "" {
+			res.Header().Add("content-type", customerr.ContentType)
 		}
+		res.WriteHeader(customerr.Status)
+		if customerr.Body != nil {
+			res.Write(customerr.Body)
+		}
+		return
 	}
 	body, err = json.Marshal(shortURLArray)
 	if err != nil {

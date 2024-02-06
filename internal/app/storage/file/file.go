@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
@@ -15,6 +16,7 @@ type StorageFile struct {
 	filePath  string
 	uuidSeq   int
 	userIDSeq int
+	config    *config.Config
 }
 
 type URLInFile struct {
@@ -28,6 +30,7 @@ type URLInFile struct {
 func NewFileStorage(config *config.Config) (*StorageFile, error) {
 	storage := &StorageFile{
 		filePath: config.FileStoragePath,
+		config:   config,
 	}
 	storage.setSeqFromFile()
 	return storage, nil
@@ -75,7 +78,7 @@ func (storage *StorageFile) loadFromFile() []URLInFile {
 func (storage *StorageFile) Save(ctx context.Context, url models.URL) error {
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)
@@ -103,7 +106,7 @@ func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (
 			return url, nil
 		}
 	}
-	return nil, customerrors.ErrOriginalURLNotFound
+	return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 }
 
 func (storage *StorageFile) Ping(_ context.Context) bool {
@@ -119,7 +122,7 @@ func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URL) er
 	for _, url := range urls {
 		err := storage.Save(ctx, url)
 		if err != nil {
-			return err
+			return customerrors.NewCustomErrorInternal(err)
 		}
 	}
 	return nil
@@ -147,7 +150,7 @@ func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*mode
 	if len(urls) > 0 {
 		return urls, nil
 	}
-	return nil, customerrors.ErrOriginalURLNotFound
+	return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 }
 
 func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDelete, userID int) error {
@@ -161,7 +164,7 @@ func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDel
 	}
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR, 0666)
 	if err != nil {
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	defer file.Close()
 	for _, url := range urlsFromFile {
@@ -169,4 +172,14 @@ func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDel
 		encoder.Encode(url)
 	}
 	return nil
+}
+
+func (storage *StorageFile) IsShortURLExists(_ context.Context, shortURL string) (bool, error) {
+	urlsFromFile := storage.loadFromFile()
+	for _, urlFromFile := range urlsFromFile {
+		if urlFromFile.ShortURL == shortURL {
+			return true, nil
+		}
+	}
+	return false, nil
 }

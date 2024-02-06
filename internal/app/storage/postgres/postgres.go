@@ -3,7 +3,8 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
@@ -17,6 +18,7 @@ type StoragePostgres struct {
 	databaseURL string
 	pool        *pgxpool.Pool
 	userIDSeq   int
+	config      *config.Config
 }
 
 func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
@@ -27,6 +29,7 @@ func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
 	storage := &StoragePostgres{
 		databaseURL: config.DatabaseURL,
 		pool:        pool,
+		config:      config,
 	}
 	if err := storage.createTables(config.DatabaseURL); err != nil {
 		return nil, err
@@ -48,7 +51,9 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 			is_deleted bool default false
 		);
 	`
-	_, err := storage.pool.Exec(context.TODO(), query)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30*time.Second))
+	defer cancel()
+	_, err := storage.pool.Exec(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -59,8 +64,10 @@ func (storage *StoragePostgres) setUserIDSeq(databaseURL string) error {
 	query := `
 		select coalesce(max(created_by), 0) + 1 from urls
 	`
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30*time.Second))
+	defer cancel()
 	var userID int
-	err := storage.pool.QueryRow(context.TODO(), query).Scan(&userID)
+	err := storage.pool.QueryRow(ctx, query).Scan(&userID)
 	storage.userIDSeq = userID
 	return err
 }
@@ -69,17 +76,21 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URL) error 
 	query := getInsertQuery()
 	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	var shortURL string
 	err = tr.QueryRow(ctx, query, url.ShortURL, url.OriginalURL, url.CreatedBy).Scan(&shortURL)
 	if shortURL != "" {
 		tr.Rollback(ctx)
-		return customerrors.NewErrOriginalURLAlreadyExists(shortURL)
+		err := customerrors.NewCustomError(errors.New("original url already exists"))
+		err.Status = http.StatusConflict
+		err.ContentType = "text/plain"
+		err.Body = []byte(storage.config.BaseReturnURL + "/" + shortURL)
+		return err
 	}
 	if err != nil {
 		tr.Rollback(ctx)
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	tr.Commit(ctx)
 	return nil
@@ -95,14 +106,18 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
 		tr.Rollback(ctx)
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	queueQuery.QueryRow(func(row pgx.Row) error {
 		var shortURL string
 		row.Scan(&shortURL)
 		if shortURL != "" {
 			tr.Rollback(ctx)
-			return customerrors.NewErrOriginalURLAlreadyExists(shortURL)
+			err := customerrors.NewCustomError(errors.New("original url already exists"))
+			err.Status = http.StatusConflict
+			err.ContentType = "text/plain"
+			err.Body = []byte(storage.config.BaseReturnURL + "/" + shortURL)
+			return err
 		}
 		return nil
 	})
@@ -110,7 +125,7 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 	err = res.Close()
 	if err != nil {
 		tr.Rollback(ctx)
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	tr.Commit(ctx)
 	return nil
@@ -136,9 +151,9 @@ func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL str
 	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&url.ID, &url.ShortURL, &url.OriginalURL, &url.IsDeleted)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, customerrors.ErrOriginalURLNotFound
+			return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 		}
-		return nil, err
+		return nil, customerrors.NewCustomErrorInternal(err)
 	}
 	return &url, nil
 }
@@ -158,16 +173,16 @@ func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*
 	rows, err := storage.pool.Query(ctx, query, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, customerrors.ErrOriginalURLNotFound
+			return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 		}
-		return nil, err
+		return nil, customerrors.NewCustomErrorInternal(err)
 	}
 	urls := make([]*models.URL, 0)
 	for rows.Next() {
 		url := models.URL{}
 		err := rows.Scan(&url.ID, &url.ShortURL, &url.OriginalURL)
 		if err != nil {
-			return nil, fmt.Errorf("unable to scan row: %w", err)
+			return nil, customerrors.NewCustomErrorInternal(err)
 		}
 		urls = append(urls, &url)
 	}
@@ -184,7 +199,7 @@ func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.UR
 	tr, err := storage.pool.Begin(ctx)
 	if err != nil {
 		tr.Rollback(ctx)
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	queueQuery.Exec(func(ct pgconn.CommandTag) error {
 		return nil
@@ -193,8 +208,18 @@ func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.UR
 	err = res.Close()
 	if err != nil {
 		tr.Rollback(ctx)
-		return err
+		return customerrors.NewCustomErrorInternal(err)
 	}
 	tr.Commit(ctx)
 	return nil
+}
+
+func (storage *StoragePostgres) IsShortURLExists(ctx context.Context, shortURL string) (bool, error) {
+	query := "select exists(select * from urls where short_url = $1) "
+	var ok bool
+	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&ok)
+	if err != nil {
+		return false, customerrors.NewCustomErrorInternal(err)
+	}
+	return ok, nil
 }

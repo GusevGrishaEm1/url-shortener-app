@@ -27,6 +27,7 @@ type Storage interface {
 	FindByUser(context.Context, int) ([]*models.URL, error)
 	GetUserID(context.Context) int
 	DeleteUrls(context.Context, []models.URLToDelete, int) error
+	IsShortURLExists(context.Context, string) (bool, error)
 }
 
 func GetStorageTypeByConfig(config *config.Config) StorageType {
@@ -42,7 +43,7 @@ func GetStorageTypeByConfig(config *config.Config) StorageType {
 func New(storageType StorageType, config *config.Config) (Storage, error) {
 	switch storageType {
 	case StorageTypeInMemory:
-		return inmemory.NewInMemoryStorage(), nil
+		return inmemory.NewInMemoryStorage(config), nil
 	case StorageTypeFile:
 		return file.NewFileStorage(config)
 	case StorageTypePostgres:
