@@ -84,8 +84,7 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URL) error 
 		tr.Rollback(ctx)
 		err := customerrors.NewCustomError(errors.New("original url already exists"))
 		err.Status = http.StatusConflict
-		err.ContentType = "text/plain"
-		err.Body = []byte(storage.config.BaseReturnURL + "/" + shortURL)
+		err.ShortURL = shortURL
 		return err
 	}
 	if err != nil {
@@ -115,8 +114,7 @@ func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL
 			tr.Rollback(ctx)
 			err := customerrors.NewCustomError(errors.New("original url already exists"))
 			err.Status = http.StatusConflict
-			err.ContentType = "text/plain"
-			err.Body = []byte(storage.config.BaseReturnURL + "/" + shortURL)
+			err.ShortURL = shortURL
 			return err
 		}
 		return nil

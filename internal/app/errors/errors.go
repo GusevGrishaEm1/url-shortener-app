@@ -9,6 +9,7 @@ type CustomError struct {
 	Status      int
 	Body        []byte
 	ContentType string
+	ShortURL    string
 }
 
 func (customErr CustomError) Error() string {

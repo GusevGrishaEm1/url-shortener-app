@@ -43,6 +43,10 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	shortURL, err := handler.service.CreateShortURL(ctx, string(body))
 	if err != nil {
 		customerr := err.(*customerrors.CustomError)
+		if customerr.Status == http.StatusConflict {
+			customerr.ContentType = "text/plain"
+			customerr.Body = []byte(handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL)
+		}
 		if customerr.ContentType != "" {
 			res.Header().Add("content-type", customerr.ContentType)
 		}
@@ -74,6 +78,13 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	shortURL, err := handler.service.CreateShortURL(ctx, reqModel.URL)
 	if err != nil {
 		customerr := err.(*customerrors.CustomError)
+		if customerr.Status == http.StatusConflict {
+			customerr.ContentType = "application/json"
+			body, err = json.Marshal(&models.Response{
+				Result: handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL,
+			})
+			customerr.Body = body
+		}
 		if customerr.ContentType != "" {
 			res.Header().Add("content-type", customerr.ContentType)
 		}
@@ -142,6 +153,13 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	shortURLArray, err := handler.service.CreateBatchShortURL(ctx, urls)
 	if err != nil {
 		customerr := err.(*customerrors.CustomError)
+		if customerr.Status == http.StatusConflict {
+			customerr.ContentType = "application/json"
+			body, err = json.Marshal(&models.Response{
+				Result: handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL,
+			})
+			customerr.Body = body
+		}
 		if customerr.ContentType != "" {
 			res.Header().Add("content-type", customerr.ContentType)
 		}
