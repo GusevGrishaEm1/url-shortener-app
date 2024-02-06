@@ -83,6 +83,10 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 			body, err = json.Marshal(&models.Response{
 				Result: handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL,
 			})
+			if err != nil {
+				res.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			customerr.Body = body
 		}
 		if customerr.ContentType != "" {
@@ -158,6 +162,10 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 			body, err = json.Marshal(&models.Response{
 				Result: handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL,
 			})
+			if err != nil {
+				res.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			customerr.Body = body
 		}
 		if customerr.ContentType != "" {
