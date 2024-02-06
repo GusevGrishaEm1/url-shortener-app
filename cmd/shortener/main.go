@@ -11,9 +11,7 @@ func main() {
 	if err := logger.Init(slog.LevelInfo); err != nil {
 		panic(err)
 	}
-	config := parseFlagsAndEnv()
-	err := server.StartServer(config)
-	if err != nil {
+	if err := server.StartServer(parseFlagsAndEnv()); err != nil {
 		panic(err)
 	}
 }
