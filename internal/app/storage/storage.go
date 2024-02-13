@@ -26,7 +26,7 @@ type Storage interface {
 	Ping(context.Context) bool
 	FindByUser(context.Context, int) ([]*models.URL, error)
 	GetUserID(context.Context) int
-	DeleteUrls(context.Context, []models.URLToDelete, int) error
+	DeleteUrls(context.Context, []models.URLToDelete) error
 	IsShortURLExists(context.Context, string) (bool, error)
 }
 

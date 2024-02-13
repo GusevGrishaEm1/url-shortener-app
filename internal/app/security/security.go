@@ -36,7 +36,7 @@ func New(config *config.Config, service ShortenerService) *SecurityHandlerImpl {
 
 func (securityHandler *SecurityHandlerImpl) RequestSecurityOnlyUserID(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("UserID")
+		cookie, err := r.Cookie(string(UserID))
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -52,12 +52,12 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurityOnlyUserID(h http.Han
 
 func (securityHandler *SecurityHandlerImpl) RequestSecurity(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("UserID")
+		cookie, err := r.Cookie(string(UserID))
 		if errors.Is(err, http.ErrNoCookie) {
 			newUserID := securityHandler.GetUserID(r.Context())
 			token, _ := buildJWTString(newUserID)
 			cookie = &http.Cookie{
-				Name:  "UserID",
+				Name:  string(UserID),
 				Value: token,
 			}
 			http.SetCookie(w, cookie)

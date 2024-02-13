@@ -4,20 +4,20 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type StoragePostgres struct {
 	databaseURL string
 	pool        *pgxpool.Pool
-	userIDSeq   int
+	userIDSeq   atomic.Int64
 	config      *config.Config
 }
 
@@ -68,7 +68,7 @@ func (storage *StoragePostgres) setUserIDSeq(databaseURL string) error {
 	defer cancel()
 	var userID int
 	err := storage.pool.QueryRow(ctx, query).Scan(&userID)
-	storage.userIDSeq = userID
+	storage.userIDSeq.Store(int64(userID))
 	return err
 }
 
@@ -161,9 +161,9 @@ func (storage *StoragePostgres) Ping(ctx context.Context) bool {
 }
 
 func (storage *StoragePostgres) GetUserID(context.Context) int {
-	userID := storage.userIDSeq
-	storage.userIDSeq++
-	return userID
+	userID := storage.userIDSeq.Load()
+	storage.userIDSeq.Add(1)
+	return int(userID)
 }
 
 func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
@@ -187,28 +187,17 @@ func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*
 	return urls, nil
 }
 
-func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.URLToDelete, userID int) error {
-	query := "update urls set is_deleted = true where short_url = $1"
+func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.URLToDelete) error {
+	query := "update urls set is_deleted = true where short_url = $1 and created_by = $2"
 	batch := &pgx.Batch{}
-	var queueQuery *pgx.QueuedQuery
 	for _, url := range urls {
-		queueQuery = batch.Queue(query, string(url))
+		batch.Queue(query, url.ShortURL, url.UserID)
 	}
-	tr, err := storage.pool.Begin(ctx)
+	res := storage.pool.SendBatch(ctx, batch)
+	err := res.Close()
 	if err != nil {
-		tr.Rollback(ctx)
 		return customerrors.NewCustomErrorInternal(err)
 	}
-	queueQuery.Exec(func(ct pgconn.CommandTag) error {
-		return nil
-	})
-	res := tr.SendBatch(ctx, batch)
-	err = res.Close()
-	if err != nil {
-		tr.Rollback(ctx)
-		return customerrors.NewCustomErrorInternal(err)
-	}
-	tr.Commit(ctx)
 	return nil
 }
 

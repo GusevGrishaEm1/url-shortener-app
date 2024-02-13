@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"sync"
+	"sync/atomic"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
@@ -15,8 +17,9 @@ import (
 type StorageFile struct {
 	filePath  string
 	uuidSeq   int
-	userIDSeq int
-	config    *config.Config
+	userIDSeq atomic.Int64
+	sync.RWMutex
+	config *config.Config
 }
 
 type URLInFile struct {
@@ -49,7 +52,7 @@ func (storage *StorageFile) setSeqFromFile() {
 		}
 	}
 	storage.uuidSeq = uuidSeq
-	storage.userIDSeq = userIDSeq
+	storage.userIDSeq.Store(int64(userIDSeq))
 }
 
 func (storage *StorageFile) loadFromFile() []URLInFile {
@@ -76,6 +79,8 @@ func (storage *StorageFile) loadFromFile() []URLInFile {
 }
 
 func (storage *StorageFile) Save(ctx context.Context, url models.URL) error {
+	storage.Lock()
+	defer storage.Unlock()
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return customerrors.NewCustomErrorInternal(err)
@@ -88,11 +93,17 @@ func (storage *StorageFile) Save(ctx context.Context, url models.URL) error {
 		OriginalURL: url.OriginalURL,
 		CreatedBy:   url.CreatedBy,
 	}
+	err = encoder.Encode(urlInFile)
 	storage.uuidSeq++
-	return encoder.Encode(urlInFile)
+	if err != nil {
+		return customerrors.NewCustomErrorInternal(err)
+	}
+	return nil
 }
 
 func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (*models.URL, error) {
+	storage.Lock()
+	defer storage.Unlock()
 	urlsInFile := storage.loadFromFile()
 	for _, el := range urlsInFile {
 		if el.ShortURL == shortURL {
@@ -110,7 +121,9 @@ func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (
 }
 
 func (storage *StorageFile) Ping(_ context.Context) bool {
+	storage.RLock()
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR, 0666)
+	storage.RUnlock()
 	if err != nil {
 		return false
 	}
@@ -129,12 +142,14 @@ func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URL) er
 }
 
 func (storage *StorageFile) GetUserID(context.Context) int {
-	userID := storage.userIDSeq
-	storage.userIDSeq++
-	return userID
+	userID := storage.userIDSeq.Load()
+	storage.userIDSeq.Add(1)
+	return int(userID)
 }
 
 func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
+	storage.RLock()
+	defer storage.RUnlock()
 	urlsInFile := storage.loadFromFile()
 	urls := make([]*models.URL, 0)
 	for _, el := range urlsInFile {
@@ -153,11 +168,13 @@ func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*mode
 	return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 }
 
-func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDelete, userID int) error {
+func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDelete) error {
+	storage.Lock()
+	defer storage.Unlock()
 	urlsFromFile := storage.loadFromFile()
 	for _, url := range urls {
 		for i, urlFromFile := range urlsFromFile {
-			if string(url) == urlFromFile.ShortURL && urlFromFile.CreatedBy == userID {
+			if url.ShortURL == urlFromFile.ShortURL && urlFromFile.CreatedBy == url.UserID {
 				urlsFromFile[i].IsDeleted = true
 			}
 		}

@@ -31,7 +31,14 @@ type URLByUser struct {
 	OriginalURL string `json:"original_url"`
 }
 
-type URLToDelete string
+type URLToDelete struct {
+	UserID   int
+	ShortURL string
+}
+
+type UserInfo struct {
+	UserID int
+}
 
 // storage model
 type URL struct {
