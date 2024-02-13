@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
@@ -11,7 +12,8 @@ func main() {
 	if err := logger.Init(slog.LevelInfo); err != nil {
 		panic(err)
 	}
-	if err := server.StartServer(parseFlagsAndEnv()); err != nil {
+	ctx := context.Background()
+	if err := server.StartServer(ctx, parseFlagsAndEnv()); err != nil {
 		panic(err)
 	}
 }

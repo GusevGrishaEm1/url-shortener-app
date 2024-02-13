@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
@@ -27,8 +28,8 @@ type SecurityHandler interface {
 	RequestSecurity(h http.HandlerFunc) http.HandlerFunc
 }
 
-func StartServer(serverConfig *config.Config) error {
-	service, err := service.New(serverConfig)
+func StartServer(ctx context.Context, serverConfig *config.Config) error {
+	service, err := service.New(ctx, serverConfig)
 	if err != nil {
 		return err
 	}

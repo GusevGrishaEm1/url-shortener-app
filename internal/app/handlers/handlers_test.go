@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,7 +27,7 @@ func TestShortenHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
 	config := config.GetDefault()
-	service, err := service.New(config)
+	service, err := service.New(context.Background(), config)
 	require.NoError(t, err)
 	handlers := New(config, service)
 	require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestShortenHandler(t *testing.T) {
 func TestExpandHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(config.GetDefault())
+	service, err := service.New(context.Background(), config.GetDefault())
 	require.NoError(t, err)
 	handlers := New(config.GetDefault(), service)
 	require.NoError(t, err)
@@ -120,7 +121,7 @@ func initShortURLSForExpandHandler(handlers *ShortenerHandlerImpl, originalURL s
 func TestShortenJSONHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(config.GetDefault())
+	service, err := service.New(context.Background(), config.GetDefault())
 	require.NoError(t, err)
 	handlers := New(config.GetDefault(), service)
 	require.NoError(t, err)
@@ -173,7 +174,7 @@ func TestShortenJSONHandler(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(config.GetDefault())
+	service, err := service.New(context.Background(), config.GetDefault())
 	require.NoError(t, err)
 	handlers := New(config.GetDefault(), service)
 	require.NoError(t, err)
@@ -215,7 +216,7 @@ func readJSON(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMess
 func TestGzipDecompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(config.GetDefault())
+	service, err := service.New(context.Background(), config.GetDefault())
 	require.NoError(t, err)
 	handlers := New(config.GetDefault(), service)
 	require.NoError(t, err)
@@ -253,7 +254,7 @@ func readJSONGzip(res *http.Response, t *testing.T) ([]byte, map[string]json.Raw
 func TestShortenJSONBatchHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(config.GetDefault())
+	service, err := service.New(context.Background(), config.GetDefault())
 	require.NoError(t, err)
 	handlers := New(config.GetDefault(), service)
 	require.NoError(t, err)

@@ -19,7 +19,7 @@ type ShortenerServiceImpl struct {
 	ch      chan models.URLToDelete
 }
 
-func New(config *config.Config) (*ShortenerServiceImpl, error) {
+func New(ctx context.Context, config *config.Config) (*ShortenerServiceImpl, error) {
 	storage, err := storage.New(storage.GetStorageTypeByConfig(config), config)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func New(config *config.Config) (*ShortenerServiceImpl, error) {
 		storage: storage,
 		ch:      make(chan models.URLToDelete, 1024),
 	}
-	go service.deleteURLBatch()
+	go service.deleteURLBatch(ctx)
 	return service, nil
 }
 
@@ -142,7 +142,7 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, userI
 	}()
 }
 
-func (service *ShortenerServiceImpl) deleteURLBatch() error {
+func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ticker := time.NewTicker(10 * time.Second)
@@ -151,6 +151,19 @@ func (service *ShortenerServiceImpl) deleteURLBatch() error {
 		select {
 		case url := <-service.ch:
 			urlsToDelete = append(urlsToDelete, url)
+			if len(urlsToDelete) >= 1000 {
+				err := service.storage.DeleteUrls(ctx, urlsToDelete)
+				if err != nil {
+					continue
+				}
+				urlsToDelete = make([]models.URLToDelete, 0)
+			}
+		case <-ctx.Done():
+			if len(urlsToDelete) == 0 {
+				break
+			}
+			service.storage.DeleteUrls(ctx, urlsToDelete)
+			break
 		case <-ticker.C:
 			if len(urlsToDelete) == 0 {
 				continue
