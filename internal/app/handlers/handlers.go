@@ -88,7 +88,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	}
 	userInfo := handler.getUserInfo(req.Context())
 	shortURL, err := handler.service.CreateShortURL(req.Context(), userInfo, reqModel.URL)
-	shouldReturn := handler.validateShortenJSONHandlerResult(err, body, res)
+	shouldReturn := handler.validateShortenJSONHandlerResult(err, res)
 	if shouldReturn {
 		return
 	}
@@ -105,13 +105,13 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	res.Write(body)
 }
 
-func (handler *ShortenerHandlerImpl) validateShortenJSONHandlerResult(err error, body []byte, res http.ResponseWriter) bool {
+func (handler *ShortenerHandlerImpl) validateShortenJSONHandlerResult(err error, res http.ResponseWriter) bool {
 	if err != nil {
 		var customerr *customerrors.CustomError
 		if errors.As(err, &customerr) {
 			if customerr.Status == http.StatusConflict {
 				customerr.ContentType = "application/json"
-				body, err = json.Marshal(&models.Response{
+				body, err := json.Marshal(&models.Response{
 					Result: handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL,
 				})
 				if err != nil {
@@ -187,7 +187,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	}
 	userInfo := handler.getUserInfo(req.Context())
 	shortURLArray, err := handler.service.CreateBatchShortURL(req.Context(), userInfo, urls)
-	shouldReturn := handler.validateShortenJSONBatchHandlerResult(err, body, res)
+	shouldReturn := handler.validateShortenJSONBatchHandlerResult(err, res)
 	if shouldReturn {
 		return
 	}
@@ -201,13 +201,13 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	res.Write(body)
 }
 
-func (handler *ShortenerHandlerImpl) validateShortenJSONBatchHandlerResult(err error, body []byte, res http.ResponseWriter) bool {
+func (handler *ShortenerHandlerImpl) validateShortenJSONBatchHandlerResult(err error, res http.ResponseWriter) bool {
 	if err != nil {
 		var customerr *customerrors.CustomError
 		if errors.As(err, &customerr) {
 			if customerr.Status == http.StatusConflict {
 				customerr.ContentType = "application/json"
-				body, err = json.Marshal(&models.Response{
+				body, err := json.Marshal(&models.Response{
 					Result: handler.serverConfig.BaseReturnURL + "/" + customerr.ShortURL,
 				})
 				if err != nil {
