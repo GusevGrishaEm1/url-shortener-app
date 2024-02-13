@@ -142,11 +142,10 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, userI
 	}()
 }
 
-func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Second)
 	urlsToDelete := make([]models.URLToDelete, 0)
+loop:
 	for {
 		select {
 		case url := <-service.ch:
@@ -160,10 +159,10 @@ func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) error {
 			}
 		case <-ctx.Done():
 			if len(urlsToDelete) == 0 {
-				break
+				break loop
 			}
 			service.storage.DeleteUrls(ctx, urlsToDelete)
-			break
+			break loop
 		case <-ticker.C:
 			if len(urlsToDelete) == 0 {
 				continue
