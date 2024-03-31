@@ -2,9 +2,10 @@ package util
 
 import "math/rand"
 
-func GetShortURL() string {
+func GenerateShortURL() string {
 	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	shortURL := make([]byte, 5)
+	const shortURLLength = 5
+	shortURL := make([]byte, shortURLLength)
 	for i := range shortURL {
 		shortURL[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}

@@ -303,3 +303,83 @@ func TestShortenJSONBatchHandler(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkShortenJSONBatchHandler(b *testing.B) {
+	err := logger.Init(slog.LevelInfo)
+	require.NoError(b, err)
+	service, err := service.New(context.Background(), config.GetDefault())
+	require.NoError(b, err)
+	handlers := New(config.GetDefault(), service)
+	type test struct {
+		reqBody         []byte
+	}
+	testData := &test{
+		reqBody: []byte(`[
+					{"correlation_id":"59080686-9e69-4a5b-a8df-9d0b30c14131","original_url":"https://uptrace.dev/blog/context-deadline-exceeded.html"},
+					{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","original_url":"https://habr.com/ru/companies/nixys/articles/461723/"}
+		]`),
+	}
+	N := 1000
+	b.ResetTimer()
+	b.Run("test", func(b *testing.B) {
+		for i := 0; i < N; i++ {
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(testData.reqBody))
+			request.Header.Set("content-type", "application/json")
+			w := httptest.NewRecorder()
+			handlers.ShortenJSONBatchHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+		}
+	})
+}
+
+func BenchmarkShortenJSONHandler(b *testing.B) {
+	err := logger.Init(slog.LevelInfo)
+	require.NoError(b, err)
+	service, err := service.New(context.Background(), config.GetDefault())
+	require.NoError(b, err)
+	handlers := New(config.GetDefault(), service)
+	type test struct {
+		reqBody         []byte
+	}
+	testData := &test{
+		reqBody:         []byte(`{"url":"https://practicum.yandex.ru/"}`),
+	}
+	N := 1000
+	b.ResetTimer()
+	b.Run("test", func(b *testing.B) {
+		for i := 0; i < N; i++ {
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(testData.reqBody))
+			request.Header.Set("content-type", "application/json")
+			w := httptest.NewRecorder()
+			handlers.ShortenJSONHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+		}
+	})
+}
+
+func BenchmarkShortenHandler(b *testing.B) {
+	err := logger.Init(slog.LevelInfo)
+	require.NoError(b, err)
+	service, err := service.New(context.Background(), config.GetDefault())
+	require.NoError(b, err)
+	handlers := New(config.GetDefault(), service)
+	type test struct {
+		reqBody         []byte
+	}
+	testData := &test{
+		reqBody:         []byte(`{"url":"https://practicum.yandex.ru/"}`),
+	}
+	N := 1000
+	b.ResetTimer()
+	b.Run("test", func(b *testing.B) {
+		for i := 0; i < N; i++ {
+			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(testData.reqBody))
+			w := httptest.NewRecorder()
+			handlers.ShortenHandler(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+		}
+	})
+}

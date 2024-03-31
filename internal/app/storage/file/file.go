@@ -19,7 +19,7 @@ type StorageFile struct {
 	uuidSeq   int
 	userIDSeq atomic.Int64
 	sync.RWMutex
-	config *config.Config
+	config config.Config
 }
 
 type URLInFile struct {
@@ -30,7 +30,7 @@ type URLInFile struct {
 	IsDeleted   bool   `json:"is_deleted"`
 }
 
-func NewFileStorage(config *config.Config) (*StorageFile, error) {
+func NewFileStorage(config config.Config) (*StorageFile, error) {
 	storage := &StorageFile{
 		filePath: config.FileStoragePath,
 		config:   config,
@@ -147,14 +147,14 @@ func (storage *StorageFile) GetUserID(context.Context) int {
 	return int(userID)
 }
 
-func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
+func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]models.URL, error) {
 	storage.RLock()
 	defer storage.RUnlock()
 	urlsInFile := storage.loadFromFile()
-	urls := make([]*models.URL, 0)
+	urls := make([]models.URL, 0)
 	for _, el := range urlsInFile {
 		if el.CreatedBy == userID {
-			urls = append(urls, &models.URL{
+			urls = append(urls, models.URL{
 				ID:          el.UUID,
 				ShortURL:    el.ShortURL,
 				OriginalURL: el.OriginalURL,

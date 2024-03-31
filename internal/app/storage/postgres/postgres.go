@@ -18,10 +18,10 @@ type StoragePostgres struct {
 	databaseURL string
 	pool        *pgxpool.Pool
 	userIDSeq   atomic.Int64
-	config      *config.Config
+	config      config.Config
 }
 
-func NewPostgresStorage(config *config.Config) (*StoragePostgres, error) {
+func NewPostgresStorage(config config.Config) (*StoragePostgres, error) {
 	pool, err := pgxpool.New(context.TODO(), config.DatabaseURL)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func getInsertQuery() string {
 	with new_id as (
 		insert into urls(short_url, original_url, created_by) values($1, $2, $3)
 		on conflict(original_url) do nothing
-		returning id
+		returning id 
 	) select
 		case when (select id from new_id) is null
 			then (select short_url from urls where original_url = $2)
@@ -166,7 +166,7 @@ func (storage *StoragePostgres) GetUserID(context.Context) int {
 	return int(userID)
 }
 
-func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*models.URL, error) {
+func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]models.URL, error) {
 	query := "select id, short_url, original_url from urls where created_by = $1"
 	rows, err := storage.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -175,14 +175,14 @@ func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]*
 		}
 		return nil, customerrors.NewCustomErrorInternal(err)
 	}
-	urls := make([]*models.URL, 0)
+	urls := make([]models.URL, 0)
 	for rows.Next() {
 		url := models.URL{}
 		err := rows.Scan(&url.ID, &url.ShortURL, &url.OriginalURL)
 		if err != nil {
 			return nil, customerrors.NewCustomErrorInternal(err)
 		}
-		urls = append(urls, &url)
+		urls = append(urls, url)
 	}
 	return urls, nil
 }
@@ -202,11 +202,11 @@ func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.UR
 }
 
 func (storage *StoragePostgres) IsShortURLExists(ctx context.Context, shortURL string) (bool, error) {
-	query := "select exists(select * from urls where short_url = $1) "
-	var ok bool
-	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&ok)
+	query := "select exists(select * from urls where short_url = $1)"
+	var isExists bool
+	err := storage.pool.QueryRow(ctx, query, shortURL).Scan(&isExists)
 	if err != nil {
 		return false, customerrors.NewCustomErrorInternal(err)
 	}
-	return ok, nil
+	return isExists, nil
 }

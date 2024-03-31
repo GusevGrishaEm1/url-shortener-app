@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
@@ -10,6 +11,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/security"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -28,20 +30,24 @@ type SecurityHandler interface {
 	RequestSecurity(h http.HandlerFunc) http.HandlerFunc
 }
 
-func StartServer(ctx context.Context, serverConfig *config.Config) error {
+func StartServer(ctx context.Context, serverConfig config.Config) error {
+	if err := logger.Init(slog.LevelInfo); err != nil {
+		return err
+	}
 	service, err := service.New(ctx, serverConfig)
 	if err != nil {
 		return err
 	}
-	securityHandler := security.New(serverConfig, service)
+	securityHandler := security.New(service)
 	handlers := handlers.New(serverConfig, service)
-	mux := initHandlers(serverConfig, handlers, securityHandler)
-	err = http.ListenAndServe(serverConfig.ServerURL, mux)
+	mappedHandlers := mappingHandlers(handlers, securityHandler)
+	err = http.ListenAndServe(serverConfig.ServerURL, mappedHandlers)
 	return err
 }
 
-func initHandlers(serverConfig *config.Config, handlers ShortenerHandler, secHandler SecurityHandler) *chi.Mux {
+func mappingHandlers(handlers ShortenerHandler, secHandler SecurityHandler) *chi.Mux {
 	r := chi.NewRouter()
+	r.Mount("/", middleware.Profiler())
 	r.Post("/", secHandler.RequestSecurity(gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenHandler))))
 	r.Get("/{shorturl}", secHandler.RequestSecurity(gzipreq.RequestZipper(logger.RequestLogger(handlers.ExpandHandler))))
 	r.Post("/api/shorten", secHandler.RequestSecurity(gzipreq.RequestZipper(logger.RequestLogger(handlers.ShortenJSONHandler))))

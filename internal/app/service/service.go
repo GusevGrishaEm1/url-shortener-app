@@ -14,12 +14,12 @@ import (
 )
 
 type ShortenerServiceImpl struct {
-	config  *config.Config
+	config  config.Config
 	storage storage.Storage
 	ch      chan models.URLToDelete
 }
 
-func New(ctx context.Context, config *config.Config) (*ShortenerServiceImpl, error) {
+func New(ctx context.Context, config config.Config) (*ShortenerServiceImpl, error) {
 	storage, err := storage.New(storage.GetStorageTypeByConfig(config), config)
 	if err != nil {
 		return nil, err
@@ -50,13 +50,13 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, userInf
 }
 
 func (service *ShortenerServiceImpl) generateShortURL(ctx context.Context) (string, error) {
-	shortURL := util.GetShortURL()
+	shortURL := util.GenerateShortURL()
 	ok, err := service.storage.IsShortURLExists(ctx, shortURL)
 	if err != nil {
 		return "", err
 	}
 	for ok {
-		shortURL := util.GetShortURL()
+		shortURL := util.GenerateShortURL()
 		ok, err = service.storage.IsShortURLExists(ctx, shortURL)
 		if err != nil {
 			return "", err
@@ -87,7 +87,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, us
 		return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url is empty"))
 	}
 	arrayToSave := make([]models.URL, len(arr))
-	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
+	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr)) 
 	for i, url := range arr {
 		shortURL, err := service.generateShortURL(ctx)
 		if err != nil {
@@ -143,26 +143,27 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, userI
 }
 
 func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
-	urlsToDelete := make([]models.URLToDelete, 0)
-loop:
+	tickerPeriod := 10 * time.Second
+	ticker := time.NewTicker(tickerPeriod)
+	maxSizeArray := 1000
+	urlsToDelete := make([]models.URLToDelete, 0, maxSizeArray)
 	for {
 		select {
 		case url := <-service.ch:
 			urlsToDelete = append(urlsToDelete, url)
-			if len(urlsToDelete) >= 1000 {
+			if len(urlsToDelete) >= maxSizeArray {
 				err := service.storage.DeleteUrls(ctx, urlsToDelete)
 				if err != nil {
 					continue
 				}
-				urlsToDelete = make([]models.URLToDelete, 0)
+				urlsToDelete = urlsToDelete[:0]
 			}
 		case <-ctx.Done():
 			if len(urlsToDelete) == 0 {
-				break loop
+				return
 			}
 			service.storage.DeleteUrls(ctx, urlsToDelete)
-			break loop
+			return
 		case <-ticker.C:
 			if len(urlsToDelete) == 0 {
 				continue
@@ -171,7 +172,7 @@ loop:
 			if err != nil {
 				continue
 			}
-			urlsToDelete = make([]models.URLToDelete, 0)
+			urlsToDelete = urlsToDelete[:0]
 		}
 	}
 }

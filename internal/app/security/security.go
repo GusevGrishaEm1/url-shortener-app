@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -28,7 +27,7 @@ type SecurityHandlerImpl struct {
 	ShortenerService
 }
 
-func New(config *config.Config, service ShortenerService) *SecurityHandlerImpl {
+func New(service ShortenerService) *SecurityHandlerImpl {
 	return &SecurityHandlerImpl{
 		service,
 	}

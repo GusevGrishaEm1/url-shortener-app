@@ -24,10 +24,10 @@ type ShortenerService interface {
 
 type ShortenerHandlerImpl struct {
 	service      ShortenerService
-	serverConfig *config.Config
+	serverConfig config.Config
 }
 
-func New(config *config.Config, service ShortenerService) *ShortenerHandlerImpl {
+func New(config config.Config, service ShortenerService) *ShortenerHandlerImpl {
 	return &ShortenerHandlerImpl{
 		service:      service,
 		serverConfig: config,
