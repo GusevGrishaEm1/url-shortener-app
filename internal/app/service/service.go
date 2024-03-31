@@ -2,29 +2,27 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/util"
 )
 
-type ShortenerServiceImpl struct {
+type shortenerService struct {
 	config  config.Config
-	storage storage.Storage
+	storage storage.ShortenerStorage
 	ch      chan models.URLToDelete
 }
 
-func New(ctx context.Context, config config.Config) (*ShortenerServiceImpl, error) {
-	storage, err := storage.New(storage.GetStorageTypeByConfig(config), config)
-	if err != nil {
-		return nil, err
-	}
-	service := &ShortenerServiceImpl{
+func NewShortenerService(ctx context.Context, config config.Config, storage storage.ShortenerStorage) (*shortenerService, error) {
+	service := &shortenerService{
 		config:  config,
 		storage: storage,
 		ch:      make(chan models.URLToDelete, 1024),
@@ -33,7 +31,7 @@ func New(ctx context.Context, config config.Config) (*ShortenerServiceImpl, erro
 	return service, nil
 }
 
-func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, userInfo models.UserInfo, originalURL string) (string, error) {
+func (service *shortenerService) CreateShortURL(ctx context.Context, userInfo models.UserInfo, originalURL string) (string, error) {
 	if originalURL == "" {
 		return "", customerrors.NewCustomErrorBadRequest(errors.New("original url is empty"))
 	}
@@ -49,7 +47,7 @@ func (service *ShortenerServiceImpl) CreateShortURL(ctx context.Context, userInf
 	return shortURL, err
 }
 
-func (service *ShortenerServiceImpl) generateShortURL(ctx context.Context) (string, error) {
+func (service *shortenerService) generateShortURL(ctx context.Context) (string, error) {
 	shortURL := util.GenerateShortURL()
 	ok, err := service.storage.IsShortURLExists(ctx, shortURL)
 	if err != nil {
@@ -65,7 +63,7 @@ func (service *ShortenerServiceImpl) generateShortURL(ctx context.Context) (stri
 	return shortURL, nil
 }
 
-func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL string) (string, error) {
+func (service *shortenerService) GetByShortURL(ctx context.Context, shortURL string) (string, error) {
 	url, err := service.storage.FindByShortURL(ctx, shortURL)
 	if err != nil {
 		return "", err
@@ -78,11 +76,11 @@ func (service *ShortenerServiceImpl) GetByShortURL(ctx context.Context, shortURL
 	return url.OriginalURL, nil
 }
 
-func (service *ShortenerServiceImpl) PingStorage(ctx context.Context) bool {
+func (service *shortenerService) PingStorage(ctx context.Context) bool {
 	return service.storage.Ping(ctx)
 }
 
-func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, userInfo models.UserInfo, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error) {
+func (service *shortenerService) CreateBatchShortURL(ctx context.Context, userInfo models.UserInfo, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error) {
 	if len(arr) == 0 {
 		return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url is empty"))
 	}
@@ -110,11 +108,11 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, us
 	return arrayToReturn, nil
 }
 
-func (service *ShortenerServiceImpl) GetUserID(ctx context.Context) int {
+func (service *shortenerService) GetUserID(ctx context.Context) int {
 	return service.storage.GetUserID(ctx)
 }
 
-func (service *ShortenerServiceImpl) GetUrlsByUser(ctx context.Context, userInfo models.UserInfo) ([]models.URLByUser, error) {
+func (service *shortenerService) GetUrlsByUser(ctx context.Context, userInfo models.UserInfo) ([]models.URLByUser, error) {
 	urls, err := service.storage.FindByUser(ctx, userInfo.UserID)
 	if err != nil {
 		return nil, err
@@ -129,7 +127,7 @@ func (service *ShortenerServiceImpl) GetUrlsByUser(ctx context.Context, userInfo
 	return urlsForUser, nil
 }
 
-func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, userInfo models.UserInfo, urls []string) {
+func (service *shortenerService) DeleteUrlsByUser(ctx context.Context, userInfo models.UserInfo, urls []string) {
 	go func() {
 		urlsToDelete := make([]models.URLToDelete, len(urls))
 		for i, el := range urls {
@@ -142,11 +140,19 @@ func (service *ShortenerServiceImpl) DeleteUrlsByUser(ctx context.Context, userI
 	}()
 }
 
-func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) {
+func (service *shortenerService) deleteURLBatch(ctx context.Context) {
 	tickerPeriod := 10 * time.Second
 	ticker := time.NewTicker(tickerPeriod)
 	maxSizeArray := 1000
 	urlsToDelete := make([]models.URLToDelete, 0, maxSizeArray)
+	defer func() {
+		if len(urlsToDelete) > 0 {
+			err := service.storage.DeleteUrls(ctx, urlsToDelete)
+			if err != nil {
+				service.logErrorWhenDeleteUrls(err, urlsToDelete)
+			}
+		}
+	}()
 	for {
 		select {
 		case url := <-service.ch:
@@ -154,6 +160,7 @@ func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) {
 			if len(urlsToDelete) >= maxSizeArray {
 				err := service.storage.DeleteUrls(ctx, urlsToDelete)
 				if err != nil {
+					service.logErrorWhenDeleteUrls(err, urlsToDelete)
 					continue
 				}
 				urlsToDelete = urlsToDelete[:0]
@@ -170,9 +177,19 @@ func (service *ShortenerServiceImpl) deleteURLBatch(ctx context.Context) {
 			}
 			err := service.storage.DeleteUrls(ctx, urlsToDelete)
 			if err != nil {
+				service.logErrorWhenDeleteUrls(err, urlsToDelete)
 				continue
 			}
 			urlsToDelete = urlsToDelete[:0]
 		}
 	}
+}
+
+func (*shortenerService) logErrorWhenDeleteUrls(err error, urlsToDelete []models.URLToDelete) {
+	urlsJSON, errJSON := json.Marshal(urlsToDelete)
+	if errJSON != nil {
+		logger.Logger.Error("failed to marshal urls to delete", errJSON)
+		return
+	}
+	logger.Logger.Error("delete urls error", err, urlsJSON)
 }

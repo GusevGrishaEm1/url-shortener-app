@@ -21,7 +21,7 @@ func Init(level slog.Level) error {
 	return nil
 }
 
-func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
+func RequestLogger(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		responseData := &responseData{
@@ -32,20 +32,20 @@ func RequestLogger(h http.HandlerFunc) http.HandlerFunc {
 			rw:           w,
 			responseData: responseData,
 		}
-		h(&lw, r)
-		Logger.
-			With(
-				slog.Group("request",
-					slog.String("uri", r.RequestURI),
-					slog.String("method", r.Method),
-					slog.String("duration", fmt.Sprint(time.Since(start).Milliseconds())+" mi;;iese"),
-				),
-				slog.Group("response",
-					slog.Int("status", lw.responseData.status),
-					slog.Int("size", lw.responseData.size),
-				),
-			).
-			Info("request info")
+		h.ServeHTTP(&lw, r)
+		duration := time.Since(start).Milliseconds()
+		Logger.Info("request info",
+			slog.Group("request",
+				slog.String("uri", r.RequestURI),
+				slog.String("method", r.Method),
+				slog.String("duration", fmt.Sprintf("%d milliseconds", duration)),
+				slog.String("client_ip", r.RemoteAddr),
+			),
+			slog.Group("response",
+				slog.Int("status", lw.responseData.status),
+				slog.Int("size", lw.responseData.size),
+			),
+		)
 	})
 }
 

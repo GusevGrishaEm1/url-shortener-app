@@ -17,6 +17,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/stretchr/testify/assert"
@@ -27,9 +28,12 @@ func TestShortenHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
 	config := config.GetDefault()
-	service, err := service.New(context.Background(), config)
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(t, err)
-	handlers := New(config, service)
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(t, err)
+	handler := NewShortenerHandler(config, service)
 	require.NoError(t, err)
 	tests := []struct {
 		name           string
@@ -51,7 +55,7 @@ func TestShortenHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(test.url)))
 			w := httptest.NewRecorder()
-			handlers.ShortenHandler(w, request)
+			handler.ShortenHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			equals := assert.Equal(t, test.expectedStatus, res.StatusCode)
@@ -69,12 +73,16 @@ func TestShortenHandler(t *testing.T) {
 func TestExpandHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault(), service)
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(t, err)
+	handler := NewShortenerHandler(config, service)
 	require.NoError(t, err)
 	originalURL := "https://gophercises.com/#signup"
-	savedShortURL := initShortURLSForExpandHandler(handlers, originalURL)
+	savedShortURL := prepareShortURL(handler, originalURL)
 	tests := []struct {
 		name           string
 		shortURL       string
@@ -94,7 +102,7 @@ func TestExpandHandler(t *testing.T) {
 	for _, test := range tests {
 		request := httptest.NewRequest(http.MethodGet, "/"+test.shortURL, nil)
 		w := httptest.NewRecorder()
-		handlers.ExpandHandler(w, request)
+		handler.ExpandHandler(w, request)
 		res := w.Result()
 		defer res.Body.Close()
 		statusValid := assert.Equal(t, test.expectedStatus, res.StatusCode)
@@ -104,7 +112,7 @@ func TestExpandHandler(t *testing.T) {
 	}
 }
 
-func initShortURLSForExpandHandler(handlers *ShortenerHandlerImpl, originalURL string) string {
+func prepareShortURL(handlers *shortenerHandler, originalURL string) string {
 	request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(originalURL)))
 	w := httptest.NewRecorder()
 	handlers.ShortenHandler(w, request)
@@ -121,9 +129,13 @@ func initShortURLSForExpandHandler(handlers *ShortenerHandlerImpl, originalURL s
 func TestShortenJSONHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault(), service)
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(t, err)
+	handler := NewShortenerHandler(config, service)
 	require.NoError(t, err)
 	tests := []struct {
 		name            string
@@ -158,7 +170,7 @@ func TestShortenJSONHandler(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(test.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
-			handlers.ShortenJSONHandler(w, request)
+			handler.ShortenJSONHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			statusValid := assert.Equal(t, test.expectedStatus, res.StatusCode)
@@ -174,11 +186,16 @@ func TestShortenJSONHandler(t *testing.T) {
 func TestGzipCompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault(), service)
+	service, err := service.NewShortenerService(ctx, config, storage)
 	require.NoError(t, err)
-	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
+	handler := NewShortenerHandler(config, service)
+	require.NoError(t, err)
+	gzipM := gzipreq.NewCompressionMiddleware()
+	gzipH := gzipM.Compression(http.HandlerFunc(handler.ShortenJSONHandler))
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
 	expectedResBody := `{"result":%s}`
 	t.Run("gzip_send", func(t *testing.T) {
@@ -191,7 +208,7 @@ func TestGzipCompression(t *testing.T) {
 		r := httptest.NewRequest("POST", "/api/shorten", buf)
 		r.Header.Set("Content-Encoding", "gzip")
 		w := httptest.NewRecorder()
-		handler(w, r)
+		gzipH.ServeHTTP(w, r)
 		res := w.Result()
 		defer res.Body.Close()
 		statusValid := assert.Equal(t, http.StatusCreated, res.StatusCode)
@@ -216,18 +233,23 @@ func readJSON(res *http.Response, t *testing.T) ([]byte, map[string]json.RawMess
 func TestGzipDecompression(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault(), service)
+	service, err := service.NewShortenerService(ctx, config, storage)
 	require.NoError(t, err)
-	handler := gzipreq.RequestZipper(handlers.ShortenJSONHandler)
+	handler := NewShortenerHandler(config, service)
+	require.NoError(t, err)
+	gzipM := gzipreq.NewCompressionMiddleware()
+	gzipH := gzipM.Compression(http.HandlerFunc(handler.ShortenJSONHandler))
 	reqBody := `{"url":"https://practicum.yandex.ru/"}`
 	expectedResBody := `{"result":%s}`
 	t.Run("gzip_recive", func(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader([]byte(reqBody)))
 		r.Header.Set("Accept-Encoding", "gzip")
 		w := httptest.NewRecorder()
-		handler(w, r)
+		gzipH.ServeHTTP(w, r)
 		res := w.Result()
 		defer res.Body.Close()
 		statusValid := assert.Equal(t, http.StatusCreated, res.StatusCode)
@@ -254,9 +276,13 @@ func readJSONGzip(res *http.Response, t *testing.T) ([]byte, map[string]json.Raw
 func TestShortenJSONBatchHandler(t *testing.T) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(t, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(t, err)
-	handlers := New(config.GetDefault(), service)
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(t, err)
+	handler := NewShortenerHandler(config, service)
 	require.NoError(t, err)
 	tests := []struct {
 		name            string
@@ -287,7 +313,7 @@ func TestShortenJSONBatchHandler(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(test.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
-			handlers.ShortenJSONBatchHandler(w, request)
+			handler.ShortenJSONBatchHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 			statusValid := assert.Equal(t, test.expectedStatus, res.StatusCode)
@@ -307,13 +333,16 @@ func TestShortenJSONBatchHandler(t *testing.T) {
 func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(b, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(b, err)
-	handlers := New(config.GetDefault(), service)
-	type test struct {
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(b, err)
+	handler := NewShortenerHandler(config, service)
+	testData := struct {
 		reqBody []byte
-	}
-	testData := &test{
+	}{
 		reqBody: []byte(`[
 					{"correlation_id":"59080686-9e69-4a5b-a8df-9d0b30c14131","original_url":"https://uptrace.dev/blog/context-deadline-exceeded.html"},
 					{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","original_url":"https://habr.com/ru/companies/nixys/articles/461723/"}
@@ -326,7 +355,7 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
-			handlers.ShortenJSONBatchHandler(w, request)
+			handler.ShortenJSONBatchHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 		}
@@ -336,13 +365,16 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 func BenchmarkShortenJSONHandler(b *testing.B) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(b, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(b, err)
-	handlers := New(config.GetDefault(), service)
-	type test struct {
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(b, err)
+	handler := NewShortenerHandler(config, service)
+	testData := struct {
 		reqBody []byte
-	}
-	testData := &test{
+	}{
 		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
 	N := 1000
@@ -352,7 +384,7 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
-			handlers.ShortenJSONHandler(w, request)
+			handler.ShortenJSONHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 		}
@@ -362,13 +394,16 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 func BenchmarkShortenHandler(b *testing.B) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(b, err)
-	service, err := service.New(context.Background(), config.GetDefault())
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
 	require.NoError(b, err)
-	handlers := New(config.GetDefault(), service)
-	type test struct {
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(b, err)
+	handler := NewShortenerHandler(config, service)
+	testData := struct {
 		reqBody []byte
-	}
-	testData := &test{
+	}{
 		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
 	N := 1000
@@ -377,7 +412,7 @@ func BenchmarkShortenHandler(b *testing.B) {
 		for i := 0; i < N; i++ {
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(testData.reqBody))
 			w := httptest.NewRecorder()
-			handlers.ShortenHandler(w, request)
+			handler.ShortenHandler(w, request)
 			res := w.Result()
 			defer res.Body.Close()
 		}

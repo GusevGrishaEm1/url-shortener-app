@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
-func RequestZipper(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+type gzipMiddleware struct{}
+
+func (*gzipMiddleware) Compression(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responseWriter := w
 		acceptEncoding := r.Header.Get("Accept-Encoding")
 		if strings.Contains(acceptEncoding, "gzip") {
@@ -25,8 +27,12 @@ func RequestZipper(h http.HandlerFunc) http.HandlerFunc {
 			}
 			r.Body = dr
 		}
-		h(responseWriter, r)
-	}
+		h.ServeHTTP(responseWriter, r)
+	})
+}
+
+func NewCompressionMiddleware() *gzipMiddleware {
+	return &gzipMiddleware{}
 }
 
 type compressWriter struct {

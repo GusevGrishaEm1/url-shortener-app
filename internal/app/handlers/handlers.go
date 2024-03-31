@@ -13,28 +13,35 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/security"
 )
 
+// ShortenerService определяет методы для взаимодействия с сервисом сокращения URL.
 type ShortenerService interface {
+	// CreateShortURL создает сокращенный URL на основе исходного URL.
 	CreateShortURL(ctx context.Context, userInfo models.UserInfo, shortURL string) (string, error)
+	// CreateBatchShortURL создает несколько сокращенных URL на основе списка исходных URL.
 	CreateBatchShortURL(ctx context.Context, userInfo models.UserInfo, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error)
+	// GetByShortURL возвращает исходный URL по сокращенному URL.
 	GetByShortURL(ctx context.Context, shortURL string) (string, error)
+	// PingStorage проверяет доступность хранилища данных.
 	PingStorage(ctx context.Context) bool
+	// GetUrlsByUser возвращает список URL, созданных пользователем.
 	GetUrlsByUser(ctx context.Context, userInfo models.UserInfo) ([]models.URLByUser, error)
+	// DeleteUrlsByUser удаляет список URL, созданных пользователем.
 	DeleteUrlsByUser(ctx context.Context, userInfo models.UserInfo, urls []string)
 }
 
-type ShortenerHandlerImpl struct {
+type shortenerHandler struct {
 	service      ShortenerService
 	serverConfig config.Config
 }
 
-func New(config config.Config, service ShortenerService) *ShortenerHandlerImpl {
-	return &ShortenerHandlerImpl{
+func NewShortenerHandler(config config.Config, service ShortenerService) *shortenerHandler {
+	return &shortenerHandler{
 		service:      service,
 		serverConfig: config,
 	}
 }
 
-func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) ShortenHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -51,7 +58,7 @@ func (handler *ShortenerHandlerImpl) ShortenHandler(res http.ResponseWriter, req
 	res.Write([]byte(handler.serverConfig.BaseReturnURL + "/" + shortURL))
 }
 
-func (handler *ShortenerHandlerImpl) validateShortenHandlerResult(err error, res http.ResponseWriter) bool {
+func (handler *shortenerHandler) validateShortenHandlerResult(err error, res http.ResponseWriter) bool {
 	if err != nil {
 		var customerr *customerrors.CustomError
 		if errors.As(err, &customerr) {
@@ -74,7 +81,7 @@ func (handler *ShortenerHandlerImpl) validateShortenHandlerResult(err error, res
 	return false
 }
 
-func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -105,7 +112,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONHandler(res http.ResponseWriter,
 	res.Write(body)
 }
 
-func (handler *ShortenerHandlerImpl) validateShortenJSONHandlerResult(err error, res http.ResponseWriter) bool {
+func (handler *shortenerHandler) validateShortenJSONHandlerResult(err error, res http.ResponseWriter) bool {
 	if err != nil {
 		var customerr *customerrors.CustomError
 		if errors.As(err, &customerr) {
@@ -135,7 +142,7 @@ func (handler *ShortenerHandlerImpl) validateShortenJSONHandlerResult(err error,
 	return false
 }
 
-func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) ExpandHandler(res http.ResponseWriter, req *http.Request) {
 	originalURL, err := handler.service.GetByShortURL(req.Context(), req.URL.Path[1:])
 	shouldReturn := handler.validateExpandHandlerResult(err, res)
 	if shouldReturn {
@@ -145,7 +152,7 @@ func (handler *ShortenerHandlerImpl) ExpandHandler(res http.ResponseWriter, req 
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (*ShortenerHandlerImpl) validateExpandHandlerResult(err error, res http.ResponseWriter) bool {
+func (*shortenerHandler) validateExpandHandlerResult(err error, res http.ResponseWriter) bool {
 	if err != nil {
 		var customerr *customerrors.CustomError
 		if errors.As(err, &customerr) {
@@ -164,7 +171,7 @@ func (*ShortenerHandlerImpl) validateExpandHandlerResult(err error, res http.Res
 	return false
 }
 
-func (handler *ShortenerHandlerImpl) PingStorageHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) PingStorageHandler(res http.ResponseWriter, req *http.Request) {
 	ok := handler.service.PingStorage(req.Context())
 	if !ok {
 		res.WriteHeader(http.StatusInternalServerError)
@@ -173,7 +180,7 @@ func (handler *ShortenerHandlerImpl) PingStorageHandler(res http.ResponseWriter,
 	res.WriteHeader(http.StatusOK)
 }
 
-func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -201,7 +208,7 @@ func (handler *ShortenerHandlerImpl) ShortenJSONBatchHandler(res http.ResponseWr
 	res.Write(body)
 }
 
-func (handler *ShortenerHandlerImpl) validateShortenJSONBatchHandlerResult(err error, res http.ResponseWriter) bool {
+func (handler *shortenerHandler) validateShortenJSONBatchHandlerResult(err error, res http.ResponseWriter) bool {
 	if err != nil {
 		var customerr *customerrors.CustomError
 		if errors.As(err, &customerr) {
@@ -231,7 +238,7 @@ func (handler *ShortenerHandlerImpl) validateShortenJSONBatchHandlerResult(err e
 	return false
 }
 
-func (handler *ShortenerHandlerImpl) UrlsByUserHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) UrlsByUserHandler(res http.ResponseWriter, req *http.Request) {
 	userInfo := handler.getUserInfo(req.Context())
 	urls, err := handler.service.GetUrlsByUser(req.Context(), userInfo)
 	if err != nil {
@@ -252,7 +259,7 @@ func (handler *ShortenerHandlerImpl) UrlsByUserHandler(res http.ResponseWriter, 
 	res.Write(body)
 }
 
-func (handler *ShortenerHandlerImpl) DeleteUrlsHandler(res http.ResponseWriter, req *http.Request) {
+func (handler *shortenerHandler) DeleteUrlsHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -268,7 +275,7 @@ func (handler *ShortenerHandlerImpl) DeleteUrlsHandler(res http.ResponseWriter, 
 	res.WriteHeader(http.StatusAccepted)
 }
 
-func (ShortenerHandlerImpl) getUserInfo(ctx context.Context) models.UserInfo {
+func (*shortenerHandler) getUserInfo(ctx context.Context) models.UserInfo {
 	userInfo := models.UserInfo{}
 	if user := ctx.Value(security.UserID); user != nil {
 		userID, ok := user.(int)

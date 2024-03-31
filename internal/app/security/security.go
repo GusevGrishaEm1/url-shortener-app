@@ -23,18 +23,18 @@ type ShortenerService interface {
 	GetUserID(context.Context) int
 }
 
-type SecurityHandlerImpl struct {
+type securityJWT struct {
 	ShortenerService
 }
 
-func New(service ShortenerService) *SecurityHandlerImpl {
-	return &SecurityHandlerImpl{
+func NewSecurityMiddleware(service ShortenerService) *securityJWT {
+	return &securityJWT{
 		service,
 	}
 }
 
-func (securityHandler *SecurityHandlerImpl) RequestSecurityOnlyUserID(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (security *securityJWT) RequiredUserID(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(string(UserID))
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -45,15 +45,15 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurityOnlyUserID(h http.Han
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		h(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
-	}
+		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
+	})
 }
 
-func (securityHandler *SecurityHandlerImpl) RequestSecurity(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (security *securityJWT) Security(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(string(UserID))
 		if errors.Is(err, http.ErrNoCookie) {
-			newUserID := securityHandler.GetUserID(r.Context())
+			newUserID := security.GetUserID(r.Context())
 			token, _ := buildJWTString(newUserID)
 			cookie = &http.Cookie{
 				Name:  string(UserID),
@@ -66,8 +66,8 @@ func (securityHandler *SecurityHandlerImpl) RequestSecurity(h http.HandlerFunc) 
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		h(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
-	}
+		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
+	})
 }
 
 func buildJWTString(userID int) (string, error) {

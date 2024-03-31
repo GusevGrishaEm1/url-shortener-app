@@ -32,20 +32,20 @@ type URLByUser struct {
 }
 
 type URLToDelete struct {
-	UserID   int
-	ShortURL string
+	UserID   int    `json:"user_id"`
+	ShortURL string `json:"short_url"`
 }
 
 type UserInfo struct {
 	UserID int
 }
 
-// storage model
+// URL представляет собой модель хранимого URL-а.
 type URL struct {
-	ID          int
-	ShortURL    string
-	OriginalURL string
-	CreatedBy   int
-	CreatedTS   time.Time
-	IsDeleted   bool
+	ID          int       // ID идентификатор URL-а в хранилище.
+	ShortURL    string    // ShortURL сокращенный URL.
+	OriginalURL string    // OriginalURL исходный URL.
+	CreatedBy   int       // CreatedBy идентификатор пользователя, который создал URL.
+	CreatedTS   time.Time // CreatedTS время создания URL.
+	IsDeleted   bool      // IsDeleted флаг, указывающий, был ли URL удален.
 }
