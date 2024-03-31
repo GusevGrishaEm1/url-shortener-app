@@ -21,10 +21,10 @@ func GetDefault() Config {
 
 func GetDefaultWithTestDB() Config {
 	return Config{
-        ServerURL:     "localhost:8080",
-        BaseReturnURL: "http://localhost:8080",
-        DatabaseURL: "postgres://test:test@localhost:5432/test?sslmode=disable",
-    }
+		ServerURL:     "localhost:8080",
+		BaseReturnURL: "http://localhost:8080",
+		DatabaseURL:   "postgres://test:test@localhost:5432/test?sslmode=disable",
+	}
 }
 
 func Init() Config {

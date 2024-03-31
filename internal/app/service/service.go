@@ -87,7 +87,7 @@ func (service *ShortenerServiceImpl) CreateBatchShortURL(ctx context.Context, us
 		return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url is empty"))
 	}
 	arrayToSave := make([]models.URL, len(arr))
-	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr)) 
+	arrayToReturn := make([]models.ShortURLInfoBatch, len(arr))
 	for i, url := range arr {
 		shortURL, err := service.generateShortURL(ctx)
 		if err != nil {

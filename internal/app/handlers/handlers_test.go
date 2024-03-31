@@ -311,7 +311,7 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 	require.NoError(b, err)
 	handlers := New(config.GetDefault(), service)
 	type test struct {
-		reqBody         []byte
+		reqBody []byte
 	}
 	testData := &test{
 		reqBody: []byte(`[
@@ -340,10 +340,10 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 	require.NoError(b, err)
 	handlers := New(config.GetDefault(), service)
 	type test struct {
-		reqBody         []byte
+		reqBody []byte
 	}
 	testData := &test{
-		reqBody:         []byte(`{"url":"https://practicum.yandex.ru/"}`),
+		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
 	N := 1000
 	b.ResetTimer()
@@ -366,10 +366,10 @@ func BenchmarkShortenHandler(b *testing.B) {
 	require.NoError(b, err)
 	handlers := New(config.GetDefault(), service)
 	type test struct {
-		reqBody         []byte
+		reqBody []byte
 	}
 	testData := &test{
-		reqBody:         []byte(`{"url":"https://practicum.yandex.ru/"}`),
+		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
 	N := 1000
 	b.ResetTimer()
