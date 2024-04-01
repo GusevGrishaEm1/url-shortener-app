@@ -1,3 +1,25 @@
+// Пакет gzip предоставляет промежуточное ПО для сжатия и разжатия данных с использованием gzip.
+//
+// gzipMiddleware является промежуточным ПО для сжатия и разжатия данных. Он применяет сжатие gzip к ответам HTTP,
+// если заголовок запроса Accept-Encoding содержит "gzip", и разжимает тело запроса, если заголовок запроса Content-Encoding содержит "gzip".
+// Пакет также предоставляет структуры compressWriter и decompressReader для обеспечения записи сжатых данных и чтения разжатых данных соответственно.
+//
+// Пример использования:
+//
+//	import (
+//	    "net/http"
+//	    "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
+//	)
+//
+//	func main() {
+//	    mux := http.NewServeMux()
+//	    mux.HandleFunc("/", myHandler)
+//
+//	    compressionMiddleware := gzip.NewCompressionMiddleware()
+//	    compressedMux := compressionMiddleware.Compression(mux)
+//
+//	    http.ListenAndServe(":8080", compressedMux)
+//	}
 package gzip
 
 import (
@@ -9,6 +31,7 @@ import (
 
 type gzipMiddleware struct{}
 
+// Compression возвращает обработчик HTTP, который сжимает или разжимает данные в зависимости от заголовков запроса и ответа.
 func (*gzipMiddleware) Compression(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responseWriter := w
@@ -31,6 +54,7 @@ func (*gzipMiddleware) Compression(h http.Handler) http.Handler {
 	})
 }
 
+// NewCompressionMiddleware создает новый экземпляр промежуточного ПО для сжатия и разжатия данных.
 func NewCompressionMiddleware() *gzipMiddleware {
 	return &gzipMiddleware{}
 }

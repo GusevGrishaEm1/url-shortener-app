@@ -39,6 +39,7 @@ type ShortenerStorage interface {
 	IsShortURLExists(ctx context.Context, shortURL string) (bool, error)
 }
 
+// GetStorageTypeByConfig возвращает тип хранилища на основе конфигурации.
 func GetStorageTypeByConfig(config config.Config) StorageType {
 	if config.DatabaseURL != "" {
 		return StorageTypePostgres
@@ -49,6 +50,7 @@ func GetStorageTypeByConfig(config config.Config) StorageType {
 	}
 }
 
+// NewShortenerStorage создает новый экземпляр хранилища URL-ов в зависимости от указанного типа хранилища.
 func NewShortenerStorage(storageType StorageType, config config.Config) (ShortenerStorage, error) {
 	switch storageType {
 	case StorageTypeInMemory:

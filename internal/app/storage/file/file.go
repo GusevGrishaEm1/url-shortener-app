@@ -14,6 +14,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 )
 
+// StorageFile представляет хранилище URL-ов в файле.
 type StorageFile struct {
 	filePath  string
 	uuidSeq   int
@@ -22,6 +23,7 @@ type StorageFile struct {
 	config config.Config
 }
 
+// URLInFile URL в файле.
 type URLInFile struct {
 	UUID        int    `json:"uuid"`
 	ShortURL    string `json:"short_url"`
@@ -30,6 +32,7 @@ type URLInFile struct {
 	IsDeleted   bool   `json:"is_deleted"`
 }
 
+// NewFileStorage создает новый экземпляр хранилища URL-ов в файле.
 func NewFileStorage(config config.Config) (*StorageFile, error) {
 	storage := &StorageFile{
 		filePath: config.FileStoragePath,
@@ -78,6 +81,7 @@ func (storage *StorageFile) loadFromFile() []URLInFile {
 	return array
 }
 
+// Save сохраняет URL в хранилище.
 func (storage *StorageFile) Save(ctx context.Context, url models.URL) error {
 	storage.Lock()
 	defer storage.Unlock()
@@ -101,6 +105,7 @@ func (storage *StorageFile) Save(ctx context.Context, url models.URL) error {
 	return nil
 }
 
+// FindByShortURL находит оригинальный URL по сокращенному URL.
 func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (*models.URL, error) {
 	storage.Lock()
 	defer storage.Unlock()
@@ -120,6 +125,7 @@ func (storage *StorageFile) FindByShortURL(_ context.Context, shortURL string) (
 	return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 }
 
+// Ping проверяет доступность хранилища.
 func (storage *StorageFile) Ping(_ context.Context) bool {
 	storage.RLock()
 	file, err := os.OpenFile(storage.filePath, os.O_RDWR, 0666)
@@ -131,6 +137,7 @@ func (storage *StorageFile) Ping(_ context.Context) bool {
 	return true
 }
 
+// SaveBatch сохраняет список URL в хранилище.
 func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URL) error {
 	for _, url := range urls {
 		err := storage.Save(ctx, url)
@@ -141,12 +148,14 @@ func (storage *StorageFile) SaveBatch(ctx context.Context, urls []models.URL) er
 	return nil
 }
 
+// GetUserID возвращает идентификатор пользователя из контекста.
 func (storage *StorageFile) GetUserID(context.Context) int {
 	userID := storage.userIDSeq.Load()
 	storage.userIDSeq.Add(1)
 	return int(userID)
 }
 
+// FindByUser находит URL, созданные конкретным пользователем.
 func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]models.URL, error) {
 	storage.RLock()
 	defer storage.RUnlock()
@@ -168,6 +177,7 @@ func (storage *StorageFile) FindByUser(ctx context.Context, userID int) ([]model
 	return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url isn't found"))
 }
 
+// DeleteUrls удаляет список URL из хранилища.
 func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDelete) error {
 	storage.Lock()
 	defer storage.Unlock()
@@ -191,6 +201,7 @@ func (storage *StorageFile) DeleteUrls(_ context.Context, urls []models.URLToDel
 	return nil
 }
 
+// IsShortURLExists проверяет, существует ли указанный сокращенный URL в хранилище.
 func (storage *StorageFile) IsShortURLExists(_ context.Context, shortURL string) (bool, error) {
 	urlsFromFile := storage.loadFromFile()
 	for _, urlFromFile := range urlsFromFile {

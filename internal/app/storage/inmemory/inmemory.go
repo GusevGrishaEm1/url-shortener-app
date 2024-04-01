@@ -12,14 +12,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 )
 
-func NewInMemoryStorage(config config.Config) *StorageInMemory {
-	return &StorageInMemory{
-		urls:        make(map[string]models.URL),
-		urlsOfUsers: make(map[int][]models.URL),
-		config:      config,
-	}
-}
-
+// StorageInMemory представляет хранилище URL-ов в памяти.
 type StorageInMemory struct {
 	urls        map[string]models.URL
 	urlsOfUsers map[int][]models.URL
@@ -28,6 +21,16 @@ type StorageInMemory struct {
 	config    config.Config
 }
 
+// NewInMemoryStorage создает новый экземпляр хранилища URL-ов в памяти.
+func NewInMemoryStorage(config config.Config) *StorageInMemory {
+	return &StorageInMemory{
+		urls:        make(map[string]models.URL),
+		urlsOfUsers: make(map[int][]models.URL),
+		config:      config,
+	}
+}
+
+// FindByShortURL находит оригинальный URL по сокращенному URL.
 func (storage *StorageInMemory) FindByShortURL(_ context.Context, shortURL string) (*models.URL, error) {
 	storage.RLock()
 	defer storage.RUnlock()
@@ -41,6 +44,7 @@ func (storage *StorageInMemory) FindByShortURL(_ context.Context, shortURL strin
 	}, nil
 }
 
+// Save сохраняет URL в хранилище.
 func (storage *StorageInMemory) Save(ctx context.Context, url models.URL) error {
 	storage.Lock()
 	defer storage.Unlock()
@@ -64,10 +68,12 @@ func (storage *StorageInMemory) saveURLForUser(ctx context.Context, url models.U
 	storage.urlsOfUsers[url.CreatedBy][0] = url
 }
 
+// Ping проверяет доступность хранилища.
 func (storage *StorageInMemory) Ping(_ context.Context) bool {
 	return true
 }
 
+// SaveBatch сохраняет список URL в хранилище.
 func (storage *StorageInMemory) SaveBatch(ctx context.Context, urls []models.URL) error {
 	storage.Lock()
 	defer storage.Unlock()
@@ -78,12 +84,14 @@ func (storage *StorageInMemory) SaveBatch(ctx context.Context, urls []models.URL
 	return nil
 }
 
+// GetUserID возвращает идентификатор пользователя из хранилища.
 func (storage *StorageInMemory) GetUserID(context.Context) int {
 	userID := storage.userIDSeq.Load()
 	storage.userIDSeq.Add(1)
 	return int(userID)
 }
 
+// FindByUser находит URL, созданные конкретным пользователем.
 func (storage *StorageInMemory) FindByUser(ctx context.Context, userID int) ([]models.URL, error) {
 	storage.RLock()
 	defer storage.RUnlock()
@@ -94,6 +102,7 @@ func (storage *StorageInMemory) FindByUser(ctx context.Context, userID int) ([]m
 	return urls, nil
 }
 
+// DeleteUrls удаляет список URL из хранилища.
 func (storage *StorageInMemory) DeleteUrls(_ context.Context, urls []models.URLToDelete) error {
 	storage.Lock()
 	defer storage.Unlock()
@@ -107,6 +116,7 @@ func (storage *StorageInMemory) DeleteUrls(_ context.Context, urls []models.URLT
 	return nil
 }
 
+// IsShortURLExists проверяет, существует ли указанный сокращенный URL в хранилище.
 func (storage *StorageInMemory) IsShortURLExists(_ context.Context, shortURL string) (bool, error) {
 	storage.RLock()
 	defer storage.RUnlock()

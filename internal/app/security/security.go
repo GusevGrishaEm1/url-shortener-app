@@ -1,3 +1,5 @@
+// Package security предоставляет middleware для обеспечения безопасности HTTP-запросов.
+
 package security
 
 import (
@@ -8,31 +10,38 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+// Claims определяет структуру для хранения JWT.
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID int
 }
 
+// UserInfo определяет тип для передачи информации о пользователе.
 type UserInfo string
 
 const (
+	// UserID используется для получения и передачи идентификатора пользователя.
 	UserID UserInfo = "UserID"
 )
 
+// ShortenerService определяет методы, необходимые для работы с сервисом сокращения URL.
 type ShortenerService interface {
 	GetUserID(context.Context) int
 }
 
+// securityJWT определяет middleware для обеспечения безопасности с использованием JWT.
 type securityJWT struct {
 	ShortenerService
 }
 
+// NewSecurityMiddleware создает новый экземпляр middleware для обеспечения безопасности.
 func NewSecurityMiddleware(service ShortenerService) *securityJWT {
 	return &securityJWT{
 		service,
 	}
 }
 
+// RequiredUserID проверяет наличие идентификатора пользователя в запросе.
 func (security *securityJWT) RequiredUserID(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(string(UserID))
@@ -49,6 +58,7 @@ func (security *securityJWT) RequiredUserID(h http.Handler) http.Handler {
 	})
 }
 
+// Security обеспечивает безопасность обработки HTTP-запросов с использованием JWT.
 func (security *securityJWT) Security(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(string(UserID))

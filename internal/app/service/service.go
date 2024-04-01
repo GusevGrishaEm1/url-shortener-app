@@ -1,3 +1,4 @@
+// Package service предоставляет функциональность для работы с URL-сервисом, включая создание, получение и удаление URL-ов.
 package service
 
 import (
@@ -21,6 +22,7 @@ type shortenerService struct {
 	ch      chan models.URLToDelete
 }
 
+// NewShortenerService создает новый экземпляр сервиса для работы с URL.
 func NewShortenerService(ctx context.Context, config config.Config, storage storage.ShortenerStorage) (*shortenerService, error) {
 	service := &shortenerService{
 		config:  config,
@@ -31,6 +33,7 @@ func NewShortenerService(ctx context.Context, config config.Config, storage stor
 	return service, nil
 }
 
+// CreateShortURL создает короткую ссылку на основе переданного URL.
 func (service *shortenerService) CreateShortURL(ctx context.Context, userInfo models.UserInfo, originalURL string) (string, error) {
 	if originalURL == "" {
 		return "", customerrors.NewCustomErrorBadRequest(errors.New("original url is empty"))
@@ -63,6 +66,7 @@ func (service *shortenerService) generateShortURL(ctx context.Context) (string, 
 	return shortURL, nil
 }
 
+// GetByShortURL возвращает оригинальный URL по короткой ссылке.
 func (service *shortenerService) GetByShortURL(ctx context.Context, shortURL string) (string, error) {
 	url, err := service.storage.FindByShortURL(ctx, shortURL)
 	if err != nil {
@@ -76,10 +80,12 @@ func (service *shortenerService) GetByShortURL(ctx context.Context, shortURL str
 	return url.OriginalURL, nil
 }
 
+// PingStorage выполняет ping хранилища.
 func (service *shortenerService) PingStorage(ctx context.Context) bool {
 	return service.storage.Ping(ctx)
 }
 
+// CreateBatchShortURL создает короткие ссылки для массива URL-ов.
 func (service *shortenerService) CreateBatchShortURL(ctx context.Context, userInfo models.UserInfo, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error) {
 	if len(arr) == 0 {
 		return nil, customerrors.NewCustomErrorBadRequest(errors.New("original url is empty"))
@@ -108,10 +114,12 @@ func (service *shortenerService) CreateBatchShortURL(ctx context.Context, userIn
 	return arrayToReturn, nil
 }
 
+// GetUserID возвращает идентификатор пользователя.
 func (service *shortenerService) GetUserID(ctx context.Context) int {
 	return service.storage.GetUserID(ctx)
 }
 
+// GetUrlsByUser возвращает URL-ы, созданные пользователем.
 func (service *shortenerService) GetUrlsByUser(ctx context.Context, userInfo models.UserInfo) ([]models.URLByUser, error) {
 	urls, err := service.storage.FindByUser(ctx, userInfo.UserID)
 	if err != nil {
@@ -127,6 +135,7 @@ func (service *shortenerService) GetUrlsByUser(ctx context.Context, userInfo mod
 	return urlsForUser, nil
 }
 
+// DeleteUrlsByUser удаляет URL-ы, созданные пользователем.
 func (service *shortenerService) DeleteUrlsByUser(ctx context.Context, userInfo models.UserInfo, urls []string) {
 	go func() {
 		urlsToDelete := make([]models.URLToDelete, len(urls))

@@ -1,3 +1,4 @@
+// Пакет config предоставляет функциональность для инициализации и конфигурации приложения.
 package config
 
 import (
@@ -5,13 +6,17 @@ import (
 	"os"
 )
 
+// Структура Config представляет собой настройки конфигурации для приложения.
+// Она включает в себя поля для URL сервера, базового URL возврата, пути к файловому хранилищу и URL базы данных.
 type Config struct {
-	ServerURL       string
-	BaseReturnURL   string
-	FileStoragePath string
-	DatabaseURL     string
+    ServerURL       string // ServerURL представляет сетевой адрес (хост:порт), где будет размещен сервер.
+    BaseReturnURL   string // BaseReturnURL представляет собой базовый адрес возврата (хост:порт), используемый для создания коротких URL.
+    FileStoragePath string // FileStoragePath представляет собой путь к каталогу, используемому для хранения файлов.
+    DatabaseURL     string // DatabaseURL представляет собой URL базы данных, используемой приложением.
 }
 
+// GetDefault возвращает объект Config с значениями по умолчанию.
+// К значениям по умолчанию относятся localhost сервера и базовые URL возврата.
 func GetDefault() Config {
 	return Config{
 		ServerURL:     "localhost:8080",
@@ -19,6 +24,7 @@ func GetDefault() Config {
 	}
 }
 
+// GetDefaultWithTestDB возвращает объект Config с значениями по умолчанию, включая URL тестовой базы данных.
 func GetDefaultWithTestDB() Config {
 	return Config{
 		ServerURL:     "localhost:8080",
@@ -26,7 +32,9 @@ func GetDefaultWithTestDB() Config {
 		DatabaseURL:   "postgres://test:test@localhost:5432/test?sslmode=disable",
 	}
 }
-
+// Init инициализирует конфигурацию приложения, объединяя настройки из переменных среды и флагов командной строки.
+// Сначала он инициализирует пустой объект Config, а затем заполняет его значениями из переменных среды с помощью функции configFromEnv.
+// Затем он переопределяет любые настройки с помощью флагов командной строки, разобранных пакетом flag.
 func Init() Config {
 	config := Config{}
 	config = configFromFlags(config)

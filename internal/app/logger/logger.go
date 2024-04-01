@@ -10,8 +10,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// Logger представляет собой экземпляр логгера, используемого для записи логов.
 var Logger = slog.New(&slogzap.ZapHandler{})
 
+// Init инициализирует логгер с указанным уровнем логирования.
+// Возвращает ошибку, если инициализация не удалась.
 func Init(level slog.Level) error {
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
@@ -21,6 +24,7 @@ func Init(level slog.Level) error {
 	return nil
 }
 
+// RequestLogger возвращает middleware для логирования информации о HTTP-запросах.
 func RequestLogger(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

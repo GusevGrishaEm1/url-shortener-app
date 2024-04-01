@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// StoragePostgres представляет хранилище URL-ов в базе данных PostgreSQL.
 type StoragePostgres struct {
 	databaseURL string
 	pool        *pgxpool.Pool
@@ -21,6 +22,7 @@ type StoragePostgres struct {
 	config      config.Config
 }
 
+// NewPostgresStorage создает новый экземпляр хранилища URL-ов в базе данных PostgreSQL.
 func NewPostgresStorage(config config.Config) (*StoragePostgres, error) {
 	pool, err := pgxpool.New(context.TODO(), config.DatabaseURL)
 	if err != nil {
@@ -72,6 +74,7 @@ func (storage *StoragePostgres) setUserIDSeq(databaseURL string) error {
 	return err
 }
 
+// Save сохраняет URL в хранилище.
 func (storage *StoragePostgres) Save(ctx context.Context, url models.URL) error {
 	query := getInsertQuery()
 	tr, err := storage.pool.Begin(ctx)
@@ -95,6 +98,7 @@ func (storage *StoragePostgres) Save(ctx context.Context, url models.URL) error 
 	return nil
 }
 
+// SaveBatch сохраняет список URL в хранилище.
 func (storage *StoragePostgres) SaveBatch(ctx context.Context, urls []models.URL) error {
 	query := getInsertQuery()
 	batch := &pgx.Batch{}
@@ -143,6 +147,7 @@ func getInsertQuery() string {
 	`
 }
 
+// FindByShortURL находит оригинальный URL по сокращенному URL.
 func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL string) (*models.URL, error) {
 	query := "select id, short_url, original_url, is_deleted from urls where short_url = $1"
 	var url models.URL
@@ -156,16 +161,19 @@ func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL str
 	return &url, nil
 }
 
+// Ping проверяет доступность хранилища.          
 func (storage *StoragePostgres) Ping(ctx context.Context) bool {
 	return storage.pool.Ping(ctx) == nil
 }
 
+// GetUserID возвращает идентификатор пользователя из контекста.
 func (storage *StoragePostgres) GetUserID(context.Context) int {
 	userID := storage.userIDSeq.Load()
 	storage.userIDSeq.Add(1)
 	return int(userID)
 }
 
+// FindByUser находит URL, созданные конкретным пользователем.
 func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]models.URL, error) {
 	query := "select id, short_url, original_url from urls where created_by = $1"
 	rows, err := storage.pool.Query(ctx, query, userID)
@@ -187,6 +195,7 @@ func (storage *StoragePostgres) FindByUser(ctx context.Context, userID int) ([]m
 	return urls, nil
 }
 
+// DeleteUrls удаляет список URL из хранилища.
 func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.URLToDelete) error {
 	query := "update urls set is_deleted = true where short_url = $1 and created_by = $2"
 	batch := &pgx.Batch{}
@@ -201,6 +210,7 @@ func (storage *StoragePostgres) DeleteUrls(ctx context.Context, urls []models.UR
 	return nil
 }
 
+// IsShortURLExists проверяет, существует ли указанный сокращенный URL в хранилище.
 func (storage *StoragePostgres) IsShortURLExists(ctx context.Context, shortURL string) (bool, error) {
 	query := "select exists(select * from urls where short_url = $1)"
 	var isExists bool
