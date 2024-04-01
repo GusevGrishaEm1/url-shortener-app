@@ -161,7 +161,7 @@ func (storage *StoragePostgres) FindByShortURL(ctx context.Context, shortURL str
 	return &url, nil
 }
 
-// Ping проверяет доступность хранилища.          
+// Ping проверяет доступность хранилища.
 func (storage *StoragePostgres) Ping(ctx context.Context) bool {
 	return storage.pool.Ping(ctx) == nil
 }

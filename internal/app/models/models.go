@@ -15,9 +15,9 @@ type Response struct {
 
 // URLInfo представляет информацию о сокращенном URL.
 type URLInfo struct {
-	UUID        int    `json:"uuid"`          // UUID идентификатор URL.
-	ShortURL    string `json:"short_url"`     // ShortURL сокращенный URL.
-	OriginalURL string `json:"original_url"`  // OriginalURL исходный URL.
+	UUID        int    `json:"uuid"`         // UUID идентификатор URL.
+	ShortURL    string `json:"short_url"`    // ShortURL сокращенный URL.
+	OriginalURL string `json:"original_url"` // OriginalURL исходный URL.
 }
 
 // ShortURLInfoBatch представляет информацию о сокращенном URL для пакетной обработки.
