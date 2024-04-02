@@ -64,17 +64,20 @@ type (
 	}
 )
 
+//WriteHeader записывает статус и размер ответа.
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.rw.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+//WriteHeader записывает статус и размер ответа.
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.rw.WriteHeader(statusCode)
 	r.responseData.status = statusCode
 }
 
+//Header возвращает заголовки HTTP-запроса.
 func (r *loggingResponseWriter) Header() http.Header {
 	return r.rw.Header()
 }

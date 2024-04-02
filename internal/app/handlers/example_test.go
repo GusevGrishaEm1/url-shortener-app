@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func ExampleShortenHandler() {
+func ExampleShortenHandler(res http.ResponseWriter, r *http.Request) {
 	handler := &shortenerHandler{}
 
 	// Создание запроса на сокращение URL
@@ -22,7 +22,7 @@ func ExampleShortenHandler() {
 	fmt.Println("Response:", resp.Body.String())
 }
 
-func ExampleExpandHandler() {
+func ExampleExpandHandler(res http.ResponseWriter, r *http.Request) {
 	handler := &shortenerHandler{}
 
 	// Создание запроса на расширение URL

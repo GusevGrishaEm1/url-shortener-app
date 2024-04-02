@@ -1,5 +1,4 @@
 // Package security предоставляет middleware для обеспечения безопасности HTTP-запросов.
-
 package security
 
 import (
@@ -19,8 +18,8 @@ type Claims struct {
 // UserInfo определяет тип для передачи информации о пользователе.
 type UserInfo string
 
+// UserID используется для получения и передачи идентификатора пользователя.
 const (
-	// UserID используется для получения и передачи идентификатора пользователя.
 	UserID UserInfo = "UserID"
 )
 
