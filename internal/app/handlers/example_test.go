@@ -7,8 +7,28 @@ import (
 	"strings"
 )
 
-func ExampleShortenHandler(res http.ResponseWriter, r *http.Request) {
-	handler := &shortenerHandler{}
+func (handler *shortenerHandler) ExampleShortenHandler() {
+	// ctx := context.Background()
+	// config := config.GetDefault()
+	// // Инициализируем хранилище URL-ов.
+	// storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
+	// if err != nil {
+	//     panic(err)
+	// }
+	// // Инициализируем сервис.
+	// service, err := service.NewShortenerService(
+	// 	ctx,
+	// 	config,
+	// 	storage,
+	// )
+	// if err != nil {
+	//     panic(err)
+	// }
+	// // Инициализируем обработчик.
+	// handler := NewShortenerHandler(
+	// 	config,
+	// 	service,
+	// )
 
 	// Создание запроса на сокращение URL
 	reqBody := strings.NewReader(`{"url": "https://example.com"}`)
@@ -22,8 +42,28 @@ func ExampleShortenHandler(res http.ResponseWriter, r *http.Request) {
 	fmt.Println("Response:", resp.Body.String())
 }
 
-func ExampleExpandHandler(res http.ResponseWriter, r *http.Request) {
-	handler := &shortenerHandler{}
+func (handler *shortenerHandler) ExampleExpandHandler() {
+	// ctx := context.Background()
+	// config := config.GetDefault()
+	// // Инициализируем хранилище URL-ов.
+	// storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
+	// if err != nil {
+	//     panic(err)
+	// }
+	// // Инициализируем сервис.
+	// service, err := service.NewShortenerService(
+	// 	ctx,
+	// 	config,
+	// 	storage,
+	// )
+	// if err != nil {
+	//     panic(err)
+	// }
+	// // Инициализируем обработчик.
+	// handler := NewShortenerHandler(
+	// 	config,
+	// 	service,
+	// )
 
 	// Создание запроса на расширение URL
 	req := httptest.NewRequest(http.MethodGet, "/abc123", nil)

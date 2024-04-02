@@ -42,7 +42,7 @@ func NewShortenerHandler(config config.Config, service ShortenerService) *shorte
 	}
 }
 
-//ShortenHandler создает сокращенный URL на основе исходного URL
+// ShortenHandler создает сокращенный URL на основе исходного URL
 func (handler *shortenerHandler) ShortenHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -83,7 +83,7 @@ func (handler *shortenerHandler) validateShortenHandlerResult(err error, res htt
 	return false
 }
 
-//ShortenJSONHandler создает сокращенный URL на основе исходного
+// ShortenJSONHandler создает сокращенный URL на основе исходного
 func (handler *shortenerHandler) ShortenJSONHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -175,7 +175,7 @@ func (*shortenerHandler) validateExpandHandlerResult(err error, res http.Respons
 	return false
 }
 
-//PingStorageHandler проверяет доступность хранилища данных
+// PingStorageHandler проверяет доступность хранилища данных
 func (handler *shortenerHandler) PingStorageHandler(res http.ResponseWriter, req *http.Request) {
 	ok := handler.service.PingStorage(req.Context())
 	if !ok {
@@ -185,7 +185,7 @@ func (handler *shortenerHandler) PingStorageHandler(res http.ResponseWriter, req
 	res.WriteHeader(http.StatusOK)
 }
 
-//ShortenJSONBatchHandler создает сокращенный URL на основе исход
+// ShortenJSONBatchHandler создает сокращенный URL на основе исход
 func (handler *shortenerHandler) ShortenJSONBatchHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -244,7 +244,7 @@ func (handler *shortenerHandler) validateShortenJSONBatchHandlerResult(err error
 	return false
 }
 
-//UrlsByUserHandler возвращает все сокращенные URL для пользователя
+// UrlsByUserHandler возвращает все сокращенные URL для пользователя
 func (handler *shortenerHandler) UrlsByUserHandler(res http.ResponseWriter, req *http.Request) {
 	userInfo := handler.getUserInfo(req.Context())
 	urls, err := handler.service.GetUrlsByUser(req.Context(), userInfo)
@@ -266,7 +266,7 @@ func (handler *shortenerHandler) UrlsByUserHandler(res http.ResponseWriter, req 
 	res.Write(body)
 }
 
-//DeleteUrlsHandler удаляет все сокращенные URL
+// DeleteUrlsHandler удаляет все сокращенные URL
 func (handler *shortenerHandler) DeleteUrlsHandler(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {

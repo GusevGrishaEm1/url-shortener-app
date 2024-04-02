@@ -11,7 +11,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage/postgres"
 )
 
-//StorageType определяет тип хранилища.
+// StorageType определяет тип хранилища.
 type StorageType string
 
 // StorageTypeInMemory определяет тип хранилища в памяти.
