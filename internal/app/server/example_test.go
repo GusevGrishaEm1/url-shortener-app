@@ -1,11 +1,17 @@
-package handlers
+package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 )
 
 func ExampleShortenJSONHandler() {
@@ -33,4 +39,19 @@ func ExampleShortenJSONHandler() {
 	handler.ExpandHandler(resp, req)
 	fmt.Println(resp.Header().Get("Location"))
 	// Output: https://example.com
+}
+
+func getHandler() (ShortenerHandler, error) {
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
+	if err != nil {
+		return nil, err
+	}
+	service, err := service.NewShortenerService(ctx, config, storage)
+	if err != nil {
+		return nil, err
+	}
+	handler := handlers.NewShortenerHandler(config, service)
+	return handler, nil
 }
