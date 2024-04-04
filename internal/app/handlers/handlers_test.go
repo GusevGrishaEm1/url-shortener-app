@@ -344,7 +344,8 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 	N := 10_000
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < N; i++ {
-			handler := getHandler(b)
+			handler, err := getHandler()
+			require.NoError(b, err)
 			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
@@ -367,7 +368,8 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 	N := 10_000
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < N; i++ {
-			handler := getHandler(b)
+			handler, err := getHandler()
+			require.NoError(b, err)
 			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
@@ -390,7 +392,8 @@ func BenchmarkShortenHandler(b *testing.B) {
 	N := 10_000
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < N; i++ {
-			handler := getHandler(b)
+			handler, err := getHandler()
+			require.NoError(b, err)
 			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(testData.reqBody))
 			w := httptest.NewRecorder()
@@ -401,13 +404,17 @@ func BenchmarkShortenHandler(b *testing.B) {
 	})
 }
 
-func getHandler(b *testing.B) *shortenerHandler {
+func getHandler() (*shortenerHandler, error) {
 	config := config.GetDefault()
 	ctx := context.Background()
 	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
-	require.NoError(b, err)
+	if err != nil {
+		return nil, err
+	}
 	service, err := service.NewShortenerService(ctx, config, storage)
-	require.NoError(b, err)
+	if err != nil {
+		return nil, err
+	}
 	handler := NewShortenerHandler(config, service)
-	return handler
+	return handler, nil
 }

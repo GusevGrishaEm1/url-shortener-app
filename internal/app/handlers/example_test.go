@@ -1,33 +1,36 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 )
 
-func (handler *shortenerHandler) ExampleShortenHandler() {
+func ExampleShortenJSONHandler() {
+	handler, _ := getHandler()
+
 	// Создание запроса на сокращение URL
 	reqBody := strings.NewReader(`{"url": "https://example.com"}`)
 	req := httptest.NewRequest(http.MethodPost, "/", reqBody)
 	resp := httptest.NewRecorder()
 
 	// Обработка запроса
-	handler.ShortenHandler(resp, req)
+	handler.ShortenJSONHandler(resp, req)
+	var data map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &data)
+	if err != nil {
+		fmt.Println("Ошибка при декодировании JSON:", err)
+		return
+	}
+	url := data["result"].(string)
+	tokens := strings.Split(url, "/")
+	token := tokens[len(tokens)-1]
 
-	// Вывод результата
-	fmt.Println("Response:", resp.Body.String())
-}
-
-func (handler *shortenerHandler) ExampleExpandHandler() {
-	// Создание запроса на расширение URL
-	req := httptest.NewRequest(http.MethodGet, "/abc123", nil)
-	resp := httptest.NewRecorder()
-
-	// Обработка запроса
+	req = httptest.NewRequest(http.MethodGet, "/"+token, nil)
+	resp = httptest.NewRecorder()
 	handler.ExpandHandler(resp, req)
-
-	// Вывод результата
-	fmt.Println("Response:", resp.Body.String())
+	fmt.Println(resp.Header().Get("Location"))
+	// Output: https://example.com
 }
