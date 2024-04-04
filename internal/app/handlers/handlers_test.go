@@ -333,13 +333,6 @@ func TestShortenJSONBatchHandler(t *testing.T) {
 func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(b, err)
-	config := config.GetDefault()
-	ctx := context.Background()
-	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
-	require.NoError(b, err)
-	service, err := service.NewShortenerService(ctx, config, storage)
-	require.NoError(b, err)
-	handler := NewShortenerHandler(config, service)
 	testData := struct {
 		reqBody []byte
 	}{
@@ -348,10 +341,11 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 					{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","original_url":"https://habr.com/ru/companies/nixys/articles/461723/"}
 		]`),
 	}
-	N := 1000
-	b.ResetTimer()
+	N := 10_000
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < N; i++ {
+			handler := getHandler(b)
+			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
@@ -365,22 +359,16 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 func BenchmarkShortenJSONHandler(b *testing.B) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(b, err)
-	config := config.GetDefault()
-	ctx := context.Background()
-	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
-	require.NoError(b, err)
-	service, err := service.NewShortenerService(ctx, config, storage)
-	require.NoError(b, err)
-	handler := NewShortenerHandler(config, service)
 	testData := struct {
 		reqBody []byte
 	}{
 		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
-	N := 1000
-	b.ResetTimer()
+	N := 10_000
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < N; i++ {
+			handler := getHandler(b)
+			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
@@ -394,22 +382,16 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 func BenchmarkShortenHandler(b *testing.B) {
 	err := logger.Init(slog.LevelInfo)
 	require.NoError(b, err)
-	config := config.GetDefault()
-	ctx := context.Background()
-	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
-	require.NoError(b, err)
-	service, err := service.NewShortenerService(ctx, config, storage)
-	require.NoError(b, err)
-	handler := NewShortenerHandler(config, service)
 	testData := struct {
 		reqBody []byte
 	}{
-		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
+		reqBody: []byte(`https://practicum.yandex.ru/`),
 	}
-	N := 1000
-	b.ResetTimer()
+	N := 10_000
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < N; i++ {
+			handler := getHandler(b)
+			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(testData.reqBody))
 			w := httptest.NewRecorder()
 			handler.ShortenHandler(w, request)
@@ -417,4 +399,15 @@ func BenchmarkShortenHandler(b *testing.B) {
 			defer res.Body.Close()
 		}
 	})
+}
+
+func getHandler(b *testing.B) *shortenerHandler {
+	config := config.GetDefault()
+	ctx := context.Background()
+	storage, err := storage.NewShortenerStorage(storage.GetStorageTypeByConfig(config), config)
+	require.NoError(b, err)
+	service, err := service.NewShortenerService(ctx, config, storage)
+	require.NoError(b, err)
+	handler := NewShortenerHandler(config, service)
+	return handler
 }
