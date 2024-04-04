@@ -14,7 +14,7 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 )
 
-func ExampleShortenJSONHandler() {
+func ExampleStartServer() {
 	handler, _ := getHandler()
 
 	// Создание запроса на сокращение URL
