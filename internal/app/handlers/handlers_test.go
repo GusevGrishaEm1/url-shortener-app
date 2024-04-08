@@ -341,11 +341,11 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 					{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","original_url":"https://habr.com/ru/companies/nixys/articles/461723/"}
 		]`),
 	}
+	handler, err := getHandler()
+	require.NoError(b, err)
+	b.ResetTimer()
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			handler, err := getHandler()
-			require.NoError(b, err)
-			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
@@ -364,11 +364,11 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 	}{
 		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
+	handler, err := getHandler()
+	require.NoError(b, err)
+	b.ResetTimer()
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			handler, err := getHandler()
-			require.NoError(b, err)
-			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(testData.reqBody))
 			request.Header.Set("content-type", "application/json")
 			w := httptest.NewRecorder()
@@ -387,11 +387,11 @@ func BenchmarkShortenHandler(b *testing.B) {
 	}{
 		reqBody: []byte(`https://practicum.yandex.ru/`),
 	}
+	handler, err := getHandler()
+	b.ResetTimer()
 	b.Run("test", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			handler, err := getHandler()
 			require.NoError(b, err)
-			b.ResetTimer()
 			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(testData.reqBody))
 			w := httptest.NewRecorder()
 			handler.ShortenHandler(w, request)
