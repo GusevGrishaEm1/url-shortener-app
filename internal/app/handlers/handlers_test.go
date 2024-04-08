@@ -341,9 +341,8 @@ func BenchmarkShortenJSONBatchHandler(b *testing.B) {
 					{"correlation_id":"4cb58319-4431-496b-b193-e68006a3bc2c","original_url":"https://habr.com/ru/companies/nixys/articles/461723/"}
 		]`),
 	}
-	N := 10_000
 	b.Run("test", func(b *testing.B) {
-		for i := 0; i < N; i++ {
+		for i := 0; i < b.N; i++ {
 			handler, err := getHandler()
 			require.NoError(b, err)
 			b.ResetTimer()
@@ -365,9 +364,8 @@ func BenchmarkShortenJSONHandler(b *testing.B) {
 	}{
 		reqBody: []byte(`{"url":"https://practicum.yandex.ru/"}`),
 	}
-	N := 10_000
 	b.Run("test", func(b *testing.B) {
-		for i := 0; i < N; i++ {
+		for i := 0; i < b.N; i++ {
 			handler, err := getHandler()
 			require.NoError(b, err)
 			b.ResetTimer()
@@ -389,9 +387,8 @@ func BenchmarkShortenHandler(b *testing.B) {
 	}{
 		reqBody: []byte(`https://practicum.yandex.ru/`),
 	}
-	N := 10_000
 	b.Run("test", func(b *testing.B) {
-		for i := 0; i < N; i++ {
+		for i := 0; i < b.N; i++ {
 			handler, err := getHandler()
 			require.NoError(b, err)
 			b.ResetTimer()
