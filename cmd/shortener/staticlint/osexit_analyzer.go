@@ -15,6 +15,9 @@ var OSExitAnalyzer = &analysis.Analyzer{
 	Requires: []*analysis.Analyzer{},
 }
 
+// run проверяет наличие прямого вызова os.Exit в функции main.
+//
+// Функция принимает анализ Pass в качестве параметра и возвращает interface{} и ошибку.
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
 		ast.Inspect(file, func(n ast.Node) bool {
