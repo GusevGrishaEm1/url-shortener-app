@@ -36,7 +36,7 @@ func GetDefaultWithTestDB() Config {
 // Init инициализирует конфигурацию приложения, объединяя настройки из переменных среды и флагов командной строки.
 // Сначала он инициализирует пустой объект Config, а затем заполняет его значениями из переменных среды с помощью функции configFromEnv.
 // Затем он переопределяет любые настройки с помощью флагов командной строки, разобранных пакетом flag.
-func Init() Config {
+func New() Config {
 	config := Config{}
 	config = configFromFlags(config)
 	config = configFromEnv(config)

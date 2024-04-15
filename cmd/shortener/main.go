@@ -9,7 +9,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	config := config.Init()
+	config := config.New()
 	if err := server.StartServer(ctx, config); err != nil {
 		panic(err)
 	}
