@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
@@ -28,7 +27,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 						if isOSExitCall(callExpr) {
 							pass.Report(analysis.Diagnostic{
 								Pos:     callExpr.Pos(),
-								Message: fmt.Sprintf("direct os.Exit in main function"),
+								Message: "direct os.Exit in main function",
 							})
 						}
 					}
