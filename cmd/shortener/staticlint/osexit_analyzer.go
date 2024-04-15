@@ -7,6 +7,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Анализатор OSExitAnalyzer для проверки прямых вызовов os.Exit в функции main.
 var OSExitAnalyzer = &analysis.Analyzer{
 	Name:     "noosexit",
 	Doc:      "check for direct os.Exit in main function",
