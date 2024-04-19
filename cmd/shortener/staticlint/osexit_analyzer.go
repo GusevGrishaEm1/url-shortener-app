@@ -25,20 +25,23 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if !ok {
 				return true
 			}
-			if fn.Name.Name == "main" {
-				ast.Inspect(fn, func(n ast.Node) bool {
-					callExpr, ok := n.(*ast.CallExpr)
-					if ok {
-						if isOSExitCall(callExpr) {
-							pass.Report(analysis.Diagnostic{
-								Pos:     callExpr.Pos(),
-								Message: "direct os.Exit in main function",
-							})
-						}
-					}
-					return true
-				})
+			if fn.Name.Name != "main" {
+				return true
 			}
+			ast.Inspect(fn, func(n ast.Node) bool {
+				callExpr, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if isOSExitCall(callExpr) {
+					pass.Report(analysis.Diagnostic{
+						Pos:     callExpr.Pos(),
+						Message: "direct os.Exit in main function",
+					})
+					return false
+				}
+				return true
+			})
 			return true
 		})
 	}
@@ -47,11 +50,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 func isOSExitCall(expr *ast.CallExpr) bool {
 	if ident, ok := expr.Fun.(*ast.SelectorExpr); ok {
-		if ident.Sel.Name == "Exit" {
-			if ident.X.(*ast.Ident).Name == "os" {
-				return true
-			}
+		if ident.Sel.Name != "Exit" {
+			return false
 		}
+		if ident.X.(*ast.Ident).Name == "os" {
+			return true
+		}
+		return false
 	}
 	return false
 }
