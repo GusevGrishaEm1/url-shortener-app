@@ -13,7 +13,7 @@ type Config struct {
 	BaseReturnURL   string // BaseReturnURL представляет собой базовый адрес возврата (хост:порт), используемый для создания коротких URL.
 	FileStoragePath string // FileStoragePath представляет собой путь к каталогу, используемому для хранения файлов.
 	DatabaseURL     string // DatabaseURL представляет собой URL базы данных, используемой приложением.
-	EnableHTTPS     bool
+	EnableHTTPS     bool   // EnableHTTPS представляет собой флаг, указывающий на включение HTTPS сервера.
 }
 
 // GetDefault возвращает объект Config с значениями по умолчанию.

@@ -21,7 +21,6 @@ package server
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net/http"
 
@@ -96,7 +95,6 @@ func StartServer(ctx context.Context, config config.Config) error {
 	mux := getMux(handlersAndMiddlewares)
 	if config.EnableHTTPS {
 		err = http.ListenAndServeTLS(config.ServerURL, "server.crt", "server.key", mux)
-		log.Print(err)
 		return err
 	}
 	err = http.ListenAndServe(config.ServerURL, mux)
