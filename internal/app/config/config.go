@@ -13,6 +13,7 @@ type Config struct {
 	BaseReturnURL   string // BaseReturnURL представляет собой базовый адрес возврата (хост:порт), используемый для создания коротких URL.
 	FileStoragePath string // FileStoragePath представляет собой путь к каталогу, используемому для хранения файлов.
 	DatabaseURL     string // DatabaseURL представляет собой URL базы данных, используемой приложением.
+	EnableHTTPS     bool
 }
 
 // GetDefault возвращает объект Config с значениями по умолчанию.
@@ -56,6 +57,9 @@ func configFromEnv(config Config) Config {
 	if url, ok := os.LookupEnv("DATABASE_DSN"); ok {
 		config.DatabaseURL = url
 	}
+	if os.Getenv("ENABLE_HTTPS") == "true" {
+		config.EnableHTTPS = true
+	}
 	return config
 }
 
@@ -64,6 +68,7 @@ func configFromFlags(config Config) Config {
 	flag.StringVar(&config.BaseReturnURL, "b", "http://localhost:8080", "Return base address host:port")
 	flag.StringVar(&config.FileStoragePath, "f", "", "File storage path")
 	flag.StringVar(&config.DatabaseURL, "d", "", "Database URL")
+	flag.BoolVar(&config.EnableHTTPS, "s", false, "Enable HTTPS")
 	flag.Parse()
 	return config
 }

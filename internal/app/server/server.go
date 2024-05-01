@@ -93,6 +93,10 @@ func StartServer(ctx context.Context, config config.Config) error {
 	}
 
 	mux := getMux(handlersAndMiddlewares)
+	if config.EnableHTTPS {
+		http.ListenAndServeTLS(config.ServerURL, "conf.pem", "key.pem", mux)
+		return err
+	}
 	err = http.ListenAndServe(config.ServerURL, mux)
 	return err
 }
