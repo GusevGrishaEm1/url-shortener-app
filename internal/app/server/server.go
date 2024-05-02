@@ -28,7 +28,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
@@ -107,16 +106,8 @@ func StartServer(ctx context.Context, config config.Config) error {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
 		<-sigs
-		shutdownCtx, _ := context.WithTimeout(ctx, 30*time.Second)
 
-		go func() {
-			<-shutdownCtx.Done()
-			if shutdownCtx.Err() == context.DeadlineExceeded {
-				log.Fatal("graceful shutdown timed out.. forcing exit.")
-			}
-		}()
-
-		err := srv.Shutdown(shutdownCtx)
+		err := srv.Shutdown(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
