@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 )
@@ -9,11 +10,12 @@ import (
 // Структура Config представляет собой настройки конфигурации для приложения.
 // Она включает в себя поля для URL сервера, базового URL возврата, пути к файловому хранилищу и URL базы данных.
 type Config struct {
-	ServerURL       string // ServerURL представляет сетевой адрес (хост:порт), где будет размещен сервер.
-	BaseReturnURL   string // BaseReturnURL представляет собой базовый адрес возврата (хост:порт), используемый для создания коротких URL.
-	FileStoragePath string // FileStoragePath представляет собой путь к каталогу, используемому для хранения файлов.
-	DatabaseURL     string // DatabaseURL представляет собой URL базы данных, используемой приложением.
-	EnableHTTPS     bool   // EnableHTTPS представляет собой флаг, указывающий на включение HTTPS сервера.
+	ServerURL       string `json:"server_address"`    // ServerURL представляет сетевой адрес (хост:порт), где будет размещен сервер.
+	BaseReturnURL   string `json:"base_url"`          // BaseReturnURL представляет собой базовый адрес возврата (хост:порт), используемый для создания коротких URL.
+	FileStoragePath string `json:"file_storage_path"` // FileStoragePath представляет собой путь к каталогу, используемому для хранения файлов.
+	DatabaseURL     string `json:"database_dsn"`      // DatabaseURL представляет собой URL базы данных, используемой приложением.
+	EnableHTTPS     bool   `json:"enable_https"`      // EnableHTTPS представляет собой флаг, указывающий на включение HTTPS сервера.
+	ConfigPath      string // ConfigPath представляет собой путь к конфигурационному файлу.
 }
 
 // GetDefault возвращает объект Config с значениями по умолчанию.
@@ -37,11 +39,16 @@ func GetDefaultWithTestDB() Config {
 // Init инициализирует конфигурацию приложения, объединяя настройки из переменных среды и флагов командной строки.
 // Сначала он инициализирует пустой объект Config, а затем заполняет его значениями из переменных среды с помощью функции configFromEnv.
 // Затем он переопределяет любые настройки с помощью флагов командной строки, разобранных пакетом flag.
-func New() Config {
+func New() (Config, error) {
 	config := Config{}
+	var err error
+	config, err = configFromFile(config)
+	if err != nil {
+		return config, err
+	}
 	config = configFromFlags(config)
 	config = configFromEnv(config)
-	return config
+	return config, nil
 }
 
 func configFromEnv(config Config) Config {
@@ -71,4 +78,28 @@ func configFromFlags(config Config) Config {
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "Enable HTTPS")
 	flag.Parse()
 	return config
+}
+
+func configFromFile(config Config) (Config, error) {
+	flag.StringVar(&config.ConfigPath, "c", "", "Config file path")
+	flag.Parse()
+	if config.ConfigPath == "" {
+		flag.StringVar(&config.ConfigPath, "config", "", "Config file path")
+		flag.Parse()
+	}
+	if configPath, ok := os.LookupEnv("CONFIG"); ok {
+		config.ConfigPath = configPath
+	}
+	if config.ConfigPath == "" {
+		return config, nil
+	}
+	file, err := os.ReadFile(config.ConfigPath)
+	if err != nil {
+		return Config{}, err
+	}
+	err = json.Unmarshal(file, &config)
+	if err != nil {
+		return Config{}, err
+	}
+	return config, nil
 }

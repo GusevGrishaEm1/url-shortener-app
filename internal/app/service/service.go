@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
@@ -22,14 +23,28 @@ type shortenerService struct {
 	ch      chan models.URLToDelete
 }
 
-// NewShortenerService создает новый экземпляр сервиса для работы с URL.
+// NewShortenerService создает новый экземпляр сервиса для работы с URL с workers.
+func NewShortenerServiceWithWorkers(ctx context.Context, config config.Config, storage storage.ShortenerStorage, wg *sync.WaitGroup) (*shortenerService, error) {
+	service := &shortenerService{
+		config:  config,
+		storage: storage,
+		ch:      make(chan models.URLToDelete, 1024),
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		service.deleteURLBatch(ctx)
+	}()
+	return service, nil
+}
+
+// NewShortenerService создает новый экземпляр сервиса для работы с URL без workers.
 func NewShortenerService(ctx context.Context, config config.Config, storage storage.ShortenerStorage) (*shortenerService, error) {
 	service := &shortenerService{
 		config:  config,
 		storage: storage,
 		ch:      make(chan models.URLToDelete, 1024),
 	}
-	go service.deleteURLBatch(ctx)
 	return service, nil
 }
 

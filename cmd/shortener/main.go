@@ -17,7 +17,10 @@ var (
 func main() {
 	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 	ctx := context.Background()
-	config := config.New()
+	config, err := config.New()
+	if err != nil {
+		panic(err)
+	}
 	if err := server.StartServer(ctx, config); err != nil {
 		panic(err)
 	}
