@@ -42,8 +42,8 @@ func GetDefaultWithTestDB() Config {
 func New() (Config, error) {
 	config := Config{}
 	var err error
-	config = configFromFlags(config)
 	config = configFromEnv(config)
+	config = configFromFlags(config)
 	config, err = configFromFile(config)
 	if err != nil {
 		return config, err
