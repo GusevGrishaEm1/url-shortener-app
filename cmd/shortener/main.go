@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server"
@@ -22,6 +24,9 @@ func main() {
 		panic(err)
 	}
 	if err := server.StartServer(ctx, config); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			return
+		}
 		panic(err)
 	}
 }
