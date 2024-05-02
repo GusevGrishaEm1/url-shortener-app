@@ -104,22 +104,25 @@ func StartServer(ctx context.Context, config config.Config) error {
 	srv := &http.Server{Handler: mux, Addr: config.ServerURL}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	idleConnsClosed := make(chan struct{})
 	go func() {
 		<-sigs
-
 		err := srv.Shutdown(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
+		close(idleConnsClosed)
 	}()
 
 	if config.EnableHTTPS {
 		err = srv.ListenAndServeTLS("server.crt", "server.key")
+		<-idleConnsClosed
 		cancel()
 		wg.Wait()
 		return err
 	}
 	err = srv.ListenAndServe()
+	<-idleConnsClosed
 	cancel()
 	wg.Wait()
 	return err
