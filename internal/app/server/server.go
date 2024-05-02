@@ -21,9 +21,14 @@ package server
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
@@ -98,37 +103,37 @@ func StartServer(ctx context.Context, config config.Config) error {
 
 	mux := getMux(handlersAndMiddlewares)
 	srv := &http.Server{Handler: mux, Addr: config.ServerURL}
-	// sigs := make(chan os.Signal, 1)
-	// signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	// go func() {
-	// 	<-sigs
-	// 	shutdownCtx, _ := context.WithTimeout(ctx, 30*time.Second)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	go func() {
+		<-sigs
+		shutdownCtx, _ := context.WithTimeout(ctx, 30*time.Second)
 
-	// 	go func() {
-	// 		<-shutdownCtx.Done()
-	// 		if shutdownCtx.Err() == context.DeadlineExceeded {
-	// 			log.Fatal("graceful shutdown timed out.. forcing exit.")
-	// 		}
-	// 	}()
+		go func() {
+			<-shutdownCtx.Done()
+			if shutdownCtx.Err() == context.DeadlineExceeded {
+				log.Fatal("graceful shutdown timed out.. forcing exit.")
+			}
+		}()
 
-	// 	err := srv.Shutdown(shutdownCtx)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	cancel()
-	// }()
+		err := srv.Shutdown(shutdownCtx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cancel()
+	}()
 
 	if config.EnableHTTPS {
 		err = srv.ListenAndServeTLS("server.crt", "server.key")
-		// if err == nil || err == http.ErrServerClosed {
-		// 	wg.Wait()
-		// }
+		if err == nil || err == http.ErrServerClosed {
+			wg.Wait()
+		}
 		return err
 	}
 	err = srv.ListenAndServe()
-	// if err == nil || err == http.ErrServerClosed {
-	// 	wg.Wait()
-	// }
+	if err == nil || err == http.ErrServerClosed {
+		wg.Wait()
+	}
 	return err
 }
 
