@@ -109,7 +109,7 @@ func configFromFile(config Config) (Config, error) {
 	if config.DatabaseURL == "" && configFromFile.DatabaseURL != "" {
 		config.DatabaseURL = configFromFile.DatabaseURL
 	}
-	if config.EnableHTTPS == configFromFile.EnableHTTPS {
+	if !config.EnableHTTPS && configFromFile.EnableHTTPS {
 		config.EnableHTTPS = configFromFile.EnableHTTPS
 	}
 	return config, nil
