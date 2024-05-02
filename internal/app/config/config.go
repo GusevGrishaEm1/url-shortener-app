@@ -42,12 +42,12 @@ func GetDefaultWithTestDB() Config {
 func New() (Config, error) {
 	config := Config{}
 	var err error
+	config = configFromFlags(config)
+	config = configFromEnv(config)
 	config, err = configFromFile(config)
 	if err != nil {
 		return config, err
 	}
-	config = configFromFlags(config)
-	config = configFromEnv(config)
 	return config, nil
 }
 
@@ -67,6 +67,9 @@ func configFromEnv(config Config) Config {
 	if os.Getenv("ENABLE_HTTPS") == "true" {
 		config.EnableHTTPS = true
 	}
+	if configPath, ok := os.LookupEnv("CONFIG"); ok {
+		config.ConfigPath = configPath
+	}
 	return config
 }
 
@@ -76,20 +79,12 @@ func configFromFlags(config Config) Config {
 	flag.StringVar(&config.FileStoragePath, "f", "", "File storage path")
 	flag.StringVar(&config.DatabaseURL, "d", "", "Database URL")
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "Enable HTTPS")
+	flag.StringVar(&config.ConfigPath, "c", "", "Config file path")
 	flag.Parse()
 	return config
 }
 
 func configFromFile(config Config) (Config, error) {
-	flag.StringVar(&config.ConfigPath, "c", "", "Config file path")
-	flag.Parse()
-	if config.ConfigPath == "" {
-		flag.StringVar(&config.ConfigPath, "config", "", "Config file path")
-		flag.Parse()
-	}
-	if configPath, ok := os.LookupEnv("CONFIG"); ok {
-		config.ConfigPath = configPath
-	}
 	if config.ConfigPath == "" {
 		return config, nil
 	}
@@ -97,9 +92,25 @@ func configFromFile(config Config) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	err = json.Unmarshal(file, &config)
+	configFromFile := Config{}
+	err = json.Unmarshal(file, &configFromFile)
 	if err != nil {
 		return Config{}, err
+	}
+	if config.ServerURL == "" && configFromFile.ServerURL != "" {
+		config.ServerURL = configFromFile.ServerURL
+	}
+	if config.BaseReturnURL == "" && configFromFile.BaseReturnURL != "" {
+		config.BaseReturnURL = configFromFile.BaseReturnURL
+	}
+	if config.FileStoragePath == "" && configFromFile.FileStoragePath != "" {
+		config.FileStoragePath = configFromFile.FileStoragePath
+	}
+	if config.DatabaseURL == "" && configFromFile.DatabaseURL != "" {
+		config.DatabaseURL = configFromFile.DatabaseURL
+	}
+	if config.EnableHTTPS == configFromFile.EnableHTTPS {
+		config.EnableHTTPS = configFromFile.EnableHTTPS
 	}
 	return config, nil
 }
