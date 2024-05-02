@@ -79,7 +79,7 @@ func configFromFlags(config Config) Config {
 	flag.StringVar(&config.FileStoragePath, "f", "", "File storage path")
 	flag.StringVar(&config.DatabaseURL, "d", "", "Database URL")
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "Enable HTTPS")
-	flag.StringVar(&config.ConfigPath, "c", "", "Config file path")
+	flag.StringVar(&config.ConfigPath, "config", "", "Config file path")
 	flag.Parse()
 	return config
 }
