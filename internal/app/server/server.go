@@ -111,20 +111,17 @@ func StartServer(ctx context.Context, config config.Config) error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		cancel()
 	}()
 
 	if config.EnableHTTPS {
 		err = srv.ListenAndServeTLS("server.crt", "server.key")
-		if err == nil || err == http.ErrServerClosed {
-			wg.Wait()
-		}
+		cancel()
+		wg.Wait()
 		return err
 	}
 	err = srv.ListenAndServe()
-	if err == nil || err == http.ErrServerClosed {
-		wg.Wait()
-	}
+	cancel()
+	wg.Wait()
 	return err
 }
 
