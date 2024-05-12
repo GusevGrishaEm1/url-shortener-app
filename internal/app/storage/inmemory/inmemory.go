@@ -53,17 +53,17 @@ func (storage *StorageInMemory) Save(ctx context.Context, url models.URL) error 
 	return nil
 }
 
-func (storage *StorageInMemory) saveURLForUser(ctx context.Context, url models.URL) {
+func (storage *StorageInMemory) saveURLForUser(_ context.Context, url models.URL) {
 	if url.CreatedBy == 0 {
 		return
 	}
 	urls, ok := storage.urlsOfUsers[url.CreatedBy]
-	storage.userIDSeq.Add(1)
 	if ok {
 		urls = append(urls, url)
 		storage.urlsOfUsers[url.CreatedBy] = urls
 		return
 	}
+	storage.userIDSeq.Add(1)
 	storage.urlsOfUsers[url.CreatedBy] = make([]models.URL, 1)
 	storage.urlsOfUsers[url.CreatedBy][0] = url
 }
@@ -122,4 +122,18 @@ func (storage *StorageInMemory) IsShortURLExists(_ context.Context, shortURL str
 	defer storage.RUnlock()
 	_, ok := storage.urls[shortURL]
 	return ok, nil
+}
+
+// GetStats возвращает статистику по хранилищу.
+func (storage *StorageInMemory) GetStats(ctx context.Context) (models.Stats, error) {
+	var stats models.Stats
+	countURLS := 0
+	for _, val := range storage.urls {
+		if !val.IsDeleted {
+			countURLS++
+		}
+	}
+	stats.URLS = countURLS
+	stats.Users = len(storage.urlsOfUsers)
+	return stats, nil
 }

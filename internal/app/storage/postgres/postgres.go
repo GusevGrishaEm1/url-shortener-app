@@ -33,16 +33,16 @@ func NewPostgresStorage(config config.Config) (*StoragePostgres, error) {
 		pool:        pool,
 		config:      config,
 	}
-	if err := storage.createTables(config.DatabaseURL); err != nil {
+	if err := storage.createTables(); err != nil {
 		return nil, err
 	}
-	if err := storage.setUserIDSeq(config.DatabaseURL); err != nil {
+	if err := storage.setUserIDSeq(); err != nil {
 		return nil, err
 	}
 	return storage, err
 }
 
-func (storage *StoragePostgres) createTables(databaseURL string) error {
+func (storage *StoragePostgres) createTables() error {
 	query := `
 		create table if not exists urls (
 			id serial primary key,
@@ -62,7 +62,7 @@ func (storage *StoragePostgres) createTables(databaseURL string) error {
 	return nil
 }
 
-func (storage *StoragePostgres) setUserIDSeq(databaseURL string) error {
+func (storage *StoragePostgres) setUserIDSeq() error {
 	query := `
 		select coalesce(max(created_by), 0) + 1 from urls
 	`
@@ -219,4 +219,20 @@ func (storage *StoragePostgres) IsShortURLExists(ctx context.Context, shortURL s
 		return false, customerrors.NewCustomErrorInternal(err)
 	}
 	return isExists, nil
+}
+
+// GetStats возвращает статистику по хранилищу.
+func (storage *StoragePostgres) GetStats(ctx context.Context) (models.Stats, error) {
+	query := `
+	select 
+		count(short_url) as "urls",
+		count(created_by) as "users"
+	from urls
+	where is_deleted = false`
+	var stats models.Stats
+	err := storage.pool.QueryRow(ctx, query).Scan(&stats.URLS, &stats.Users)
+	if err != nil {
+		return stats, customerrors.NewCustomErrorInternal(err)
+	}
+	return stats, nil
 }

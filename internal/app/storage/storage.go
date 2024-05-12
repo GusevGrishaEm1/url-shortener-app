@@ -41,6 +41,8 @@ type ShortenerStorage interface {
 	DeleteUrls(ctx context.Context, urls []models.URLToDelete) error
 	// IsShortURLExists проверяет, существует ли указанный сокращенный URL в хранилище.
 	IsShortURLExists(ctx context.Context, shortURL string) (bool, error)
+	// GetStats возвращает статистику по хранилищу.
+	GetStats(ctx context.Context) (models.Stats, error)
 }
 
 // GetStorageTypeByConfig возвращает тип хранилища на основе конфигурации.

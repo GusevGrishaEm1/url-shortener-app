@@ -211,3 +211,21 @@ func (storage *StorageFile) IsShortURLExists(_ context.Context, shortURL string)
 	}
 	return false, nil
 }
+
+// GetStats возвращает статистику по хранилищу.
+func (storage *StorageFile) GetStats(ctx context.Context) (models.Stats, error) {
+	urls := make(map[string]struct{})
+	users := make(map[int]struct{})
+	for _, el := range storage.loadFromFile() {
+		if _, ok := users[el.CreatedBy]; !ok {
+			users[el.CreatedBy] = struct{}{}
+		}
+		if _, ok := urls[el.ShortURL]; !ok && !el.IsDeleted {
+			urls[el.ShortURL] = struct{}{}
+		}
+	}
+	var stats models.Stats
+	stats.URLS = len(urls)
+	stats.Users = len(users)
+	return stats, nil
+}

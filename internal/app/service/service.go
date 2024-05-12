@@ -164,6 +164,10 @@ func (service *shortenerService) DeleteUrlsByUser(ctx context.Context, userInfo 
 	}()
 }
 
+func (service *shortenerService) GetStats(ctx context.Context) (models.Stats, error) {
+	return service.storage.GetStats(ctx)
+}
+
 func (service *shortenerService) deleteURLBatch(ctx context.Context) {
 	tickerPeriod := 10 * time.Second
 	ticker := time.NewTicker(tickerPeriod)

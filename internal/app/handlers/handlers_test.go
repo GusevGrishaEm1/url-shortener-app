@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
+	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"

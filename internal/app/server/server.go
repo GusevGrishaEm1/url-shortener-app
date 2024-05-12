@@ -30,10 +30,11 @@ import (
 	"syscall"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/security"
+	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/gzip"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/security"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/trustedsubnet"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/go-chi/chi/middleware"
@@ -56,6 +57,8 @@ type ShortenerHandler interface {
 	UrlsByUserHandler(res http.ResponseWriter, req *http.Request)
 	// DeleteUrlsHandler обрабатывает запрос на удаление списка URL, созданных пользователем.
 	DeleteUrlsHandler(res http.ResponseWriter, req *http.Request)
+	// StatsHandler возвращающий в ответ объект статистики
+	StatsHandler(res http.ResponseWriter, req *http.Request)
 }
 
 // SecurityMiddleware определяет middleware для обеспечения безопасности.
@@ -71,6 +74,12 @@ type CompressionMiddleware interface {
 	// Compression выполняет encode HTTP-ответов.
 	// и decode HTTP-запросов.
 	Compression(h http.Handler) http.Handler
+}
+
+// InternalMiddleware определяет middleware для обработки запросов по trusted subnet.
+type TrustedSubnetMiddleware interface {
+	// Internal ограничивает обработку запросов по trusted subnet.
+	TrustedSubnet(h http.Handler) http.Handler
 }
 
 // StartServer запускает веб-сервер для обработки http запросов.
@@ -93,11 +102,13 @@ func StartServer(ctx context.Context, config config.Config) error {
 	}
 	compress := gzipreq.NewCompressionMiddleware()
 	security := security.NewSecurityMiddleware(service)
+	subnet := trustedsubnet.NewTrustedSubnetMiddleware(config)
 	handler := handlers.NewShortenerHandler(config, service)
 	handlersAndMiddlewares := handlersAndMiddlewares{
 		handler,
 		security,
 		compress,
+		subnet,
 	}
 
 	mux := getMux(handlersAndMiddlewares)
@@ -132,6 +143,7 @@ type handlersAndMiddlewares struct {
 	ShortenerHandler
 	SecurityMiddleware
 	CompressionMiddleware
+	TrustedSubnetMiddleware
 }
 
 func getMux(ham handlersAndMiddlewares) *chi.Mux {
@@ -148,6 +160,11 @@ func getMux(ham handlersAndMiddlewares) *chi.Mux {
 	r.Post("/api/shorten", ham.ShortenJSONHandler)
 	r.Post("/api/shorten/batch", ham.ShortenJSONBatchHandler)
 	r.Get("/ping", ham.PingStorageHandler)
+
+	r.Group(func(r chi.Router) {
+		r.Use(ham.TrustedSubnet)
+		r.Get("/api/internal/stats", ham.StatsHandler)
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(ham.RequiredUserID)

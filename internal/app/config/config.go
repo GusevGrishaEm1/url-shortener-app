@@ -16,6 +16,7 @@ type Config struct {
 	DatabaseURL     string `json:"database_dsn"`      // DatabaseURL представляет собой URL базы данных, используемой приложением.
 	EnableHTTPS     bool   `json:"enable_https"`      // EnableHTTPS представляет собой флаг, указывающий на включение HTTPS сервера.
 	ConfigPath      string // ConfigPath представляет собой путь к конфигурационному файлу.
+	TrustedSubnet   string `json:"trusted_subnet"` // TrustedSubnet представляет собой IP-адрес или CIDR-маску, используемую для проверки подсети.
 }
 
 // GetDefault возвращает объект Config с значениями по умолчанию.
@@ -49,6 +50,7 @@ func New() (Config, error) {
 	if err != nil {
 		return config, err
 	}
+
 	return config, nil
 }
 
@@ -71,6 +73,9 @@ func configFromEnv(config Config) Config {
 	if configPath, ok := os.LookupEnv("CONFIG"); ok {
 		config.ConfigPath = configPath
 	}
+	if trustedSubnet, ok := os.LookupEnv("TRUSTED_SUBNET"); ok {
+		config.TrustedSubnet = trustedSubnet
+	}
 	return config
 }
 
@@ -80,7 +85,8 @@ func configFromFlags(config Config) Config {
 	flag.StringVar(&config.FileStoragePath, "f", "", "File storage path")
 	flag.StringVar(&config.DatabaseURL, "d", "", "Database URL")
 	flag.BoolVar(&config.EnableHTTPS, "s", false, "Enable HTTPS")
-	flag.StringVar(&config.ConfigPath, "config", "", "Config file path")
+	flag.StringVar(&config.ConfigPath, "c", "", "Config file path")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "Trusted subnet")
 	flag.Parse()
 	return config
 }
@@ -112,6 +118,9 @@ func configFromFile(config Config) (Config, error) {
 	}
 	if !config.EnableHTTPS && configFromFile.EnableHTTPS {
 		config.EnableHTTPS = configFromFile.EnableHTTPS
+	}
+	if config.TrustedSubnet == "" && configFromFile.TrustedSubnet != "" {
+		config.TrustedSubnet = configFromFile.TrustedSubnet
 	}
 	return config, nil
 }
