@@ -164,6 +164,7 @@ func (service *shortenerService) DeleteUrlsByUser(ctx context.Context, userInfo 
 	}()
 }
 
+// GetStats возвращает в ответ объект статистики.
 func (service *shortenerService) GetStats(ctx context.Context) (models.Stats, error) {
 	return service.storage.GetStats(ctx)
 }

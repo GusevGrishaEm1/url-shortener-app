@@ -285,6 +285,7 @@ func (handler *shortenerHandler) DeleteUrlsHandler(res http.ResponseWriter, req 
 	res.WriteHeader(http.StatusAccepted)
 }
 
+// GetStats возвращающий в ответ объект статистики.
 func (handler *shortenerHandler) StatsHandler(res http.ResponseWriter, req *http.Request) {
 	result, err := handler.service.GetStats(req.Context())
 	if err != nil {
