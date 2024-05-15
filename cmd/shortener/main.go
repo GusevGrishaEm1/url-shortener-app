@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server"
+	http_server "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http"
+	//grpc_server "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/grpc"
 )
 
 var (
@@ -23,7 +24,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := server.StartServer(ctx, config); err != nil {
+	//	if err := grpc_server.StartServer(ctx, config); err != nil {
+	// 	panic(err)
+	// }
+	if err := http_server.StartServer(ctx, config); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			return
 		}

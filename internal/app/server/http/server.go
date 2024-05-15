@@ -1,4 +1,4 @@
-// Package server реализует веб-сервер для обработки запросов по сокращению URL.
+// Package http реализует веб-сервер для обработки запросов по сокращению URL.
 //
 // В данном пакете определены интерфейсы для обработчиков URL-ов,
 // промежуточных middleware и функция для запуска веб-сервера.
@@ -17,7 +17,7 @@
 //			log.Fatal("Server startup failed: ", err)
 //		}
 //	}
-package server
+package http
 
 import (
 	"context"
@@ -30,11 +30,11 @@ import (
 	"syscall"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/security"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/trustedsubnet"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/handlers"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/go-chi/chi/middleware"

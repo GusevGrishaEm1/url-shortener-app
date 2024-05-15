@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package url_shortener;
+
+option go_package = "demo/proto";
+
+message CreateShortURLRequest {
+    string URL = 1; // URL URL для сокращения.
+}
+
+message CreateShortURLResponse {
+    string URL = 1; // URL сокращенный URL.
+    string error = 2; // Error ошибка.
+}
+
+message CreateBatchShortURLRequest {
+    message CreateBatchShortURLRequestItem {
+        string correlation_id = 1; // CorrelationID идентификатор корреляции.
+        string original_url = 2; // OriginalURL исходный URL.
+    }
+    repeated CreateBatchShortURLRequestItem items = 1;
+}
+   
+message CreateBatchShortURLResponse {
+    message CreateBatchShortURLResponseItem {
+        string correlation_id = 1; // CorrelationID идентификатор корреляции.
+        string short_url = 2; // ShortURL сокращенный URL.
+        string error = 3; // Error ошибка.
+    }
+    repeated CreateBatchShortURLResponseItem items = 1;
+}
+
+message GetByShortURLRequest {
+    string short_url = 1; // ShortURL сокращенный URL.
+}
+
+message GetByShortURLResponse {
+    string original_url = 1; // OriginalURL исходный URL.
+    string error = 2; // Error ошибка.
+}
+
+message PingStorageRequest {
+}
+
+message PingStorageResponse {
+    bool ping = 1; // Ping пинг.
+}
+
+message GetUrlsByUserRequest {
+    int32 user_id = 1; // UserID идентификатор пользователя.
+}
+
+message GetUrlsByUserResponse {
+    message GetUrlsByUserResponseItem {
+        string short_url = 1; // ShortURL сокращенный URL.
+        string original_url = 2; // OriginalURL исходный URL.
+    }
+    repeated GetUrlsByUserResponseItem items = 1;
+}
+
+message DeleteUrlsByUserRequest {
+    message DeleteUrlsByUserRequestItem {
+        int32 user_id = 1; // UserID идентификатор пользователя.
+        string short_url = 2; // ShortURL сокращенный URL.
+    }
+    repeated DeleteUrlsByUserRequestItem items = 1;
+}
+
+message DeleteUrlsByUserResponse {
+    string error = 1; // Error ошибка.
+}
+
+message GetStatsRequest {
+}
+
+message GetStatsResponse {
+    int32 urls = 1; // URLS количество сокращенных URL.
+    int32 users = 2; // USERS количество пользователей.
+}
+
+service ShortenerService {
+    // CreateShortURL создает сокращенный URL на основе исходного URL.
+    rpc CreateShortURL(CreateShortURLRequest) returns (CreateShortURLResponse) {}
+
+    // CreateBatchShortURL создает несколько сокращенных URL на основе списка исходных URL.
+    rpc CreateBatchShortURL(CreateBatchShortURLRequest) returns (CreateBatchShortURLResponse) {}
+
+    // GetByShortURL возвращает исходный URL по сокращенному URL.
+    rpc GetByShortURL(GetByShortURLRequest) returns (GetByShortURLResponse) {}
+
+    // PingStorage проверяет доступность хранилища данных.
+    rpc PingStorage(PingStorageRequest) returns (PingStorageResponse) {}
+
+    // GetUrlsByUser возвращает список URL, созданных пользователем.
+    rpc GetUrlsByUser(GetUrlsByUserRequest) returns (GetUrlsByUserResponse) {}
+
+    // DeleteUrlsByUser удаляет список URL, созданных пользователем.
+    rpc DeleteUrlsByUser(DeleteUrlsByUserRequest) returns (DeleteUrlsByUserResponse) {}
+
+    // GetStats возвращающий в ответ объект статистики.
+    rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {}
+}

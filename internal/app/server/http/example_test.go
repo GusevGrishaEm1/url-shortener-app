@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/handlers"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/handlers"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 )
