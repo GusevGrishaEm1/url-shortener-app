@@ -1,4 +1,4 @@
-package handlers
+package http
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/security"
 )
 
 // ShortenerService определяет методы для взаимодействия с сервисом сокращения URL.
@@ -27,6 +26,8 @@ type ShortenerService interface {
 	GetUrlsByUser(ctx context.Context, userInfo models.UserInfo) ([]models.URLByUser, error)
 	// DeleteUrlsByUser удаляет список URL, созданных пользователем.
 	DeleteUrlsByUser(ctx context.Context, userInfo models.UserInfo, urls []string)
+	// GetStats возвращающий в ответ объект статистики.
+	GetStats(ctx context.Context) (models.Stats, error)
 }
 
 type shortenerHandler struct {
@@ -283,9 +284,26 @@ func (handler *shortenerHandler) DeleteUrlsHandler(res http.ResponseWriter, req 
 	res.WriteHeader(http.StatusAccepted)
 }
 
+// GetStats возвращающий в ответ объект статистики.
+func (handler *shortenerHandler) StatsHandler(res http.ResponseWriter, req *http.Request) {
+	result, err := handler.service.GetStats(req.Context())
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	body, err := json.Marshal(result)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.Header().Add("content-type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	res.Write(body)
+}
+
 func (*shortenerHandler) getUserInfo(ctx context.Context) models.UserInfo {
 	userInfo := models.UserInfo{}
-	if user := ctx.Value(security.UserID); user != nil {
+	if user := ctx.Value(models.UserID); user != nil {
 		userID, ok := user.(int)
 		if ok {
 			userInfo.UserID = userID

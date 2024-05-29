@@ -1,4 +1,4 @@
-package handlers
+package http
 
 import (
 	"bytes"
@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
+	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/middlewares/gzip"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 

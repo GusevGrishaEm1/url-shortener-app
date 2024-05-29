@@ -44,6 +44,12 @@ type URLToDelete struct {
 	ShortURL string `json:"short_url"` // ShortURL сокращенный URL.
 }
 
+// Stats представляет статистику по сокращенным URL.
+type Stats struct {
+	URLS  int `json:"urls"`  // URLS количество сокращенных URL.
+	Users int `json:"users"` // USERS количество пользователей.
+}
+
 // UserInfo представляет информацию о пользователе.
 type UserInfo struct {
 	UserID int // UserID идентификатор пользователя.
@@ -58,3 +64,11 @@ type URL struct {
 	CreatedTS   time.Time // CreatedTS время создания URL.
 	IsDeleted   bool      // IsDeleted флаг, указывающий, был ли URL удален.
 }
+
+// UserInfo определяет тип для передачи информации о пользователе.
+type USER string
+
+// UserID используется для получения и передачи идентификатора пользователя.
+const (
+	UserID USER = "UserID"
+)
