@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -14,14 +15,6 @@ type Claims struct {
 	jwt.RegisteredClaims
 	UserID int
 }
-
-// UserInfo определяет тип для передачи информации о пользователе.
-type UserInfo string
-
-// UserID используется для получения и передачи идентификатора пользователя.
-const (
-	UserID UserInfo = "UserID"
-)
 
 // ShortenerService определяет методы, необходимые для работы с сервисом сокращения URL.
 type ShortenerService interface {
@@ -43,7 +36,7 @@ func NewSecurityMiddleware(service ShortenerService) *securityJWT {
 // RequiredUserID проверяет наличие идентификатора пользователя в запросе.
 func (security *securityJWT) RequiredUserID(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(string(UserID))
+		cookie, err := r.Cookie(string(models.UserID))
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -53,19 +46,19 @@ func (security *securityJWT) RequiredUserID(h http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
+		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), models.UserID, userID)))
 	})
 }
 
 // Security обеспечивает безопасность обработки HTTP-запросов с использованием JWT.
 func (security *securityJWT) Security(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(string(UserID))
+		cookie, err := r.Cookie(string(models.UserID))
 		if errors.Is(err, http.ErrNoCookie) {
 			newUserID := security.GetUserID(r.Context())
 			token, _ := buildJWTString(newUserID)
 			cookie = &http.Cookie{
-				Name:  string(UserID),
+				Name:  string(models.UserID),
 				Value: token,
 			}
 			http.SetCookie(w, cookie)
@@ -75,7 +68,7 @@ func (security *securityJWT) Security(h http.Handler) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), UserID, userID)))
+		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), models.UserID, userID)))
 	})
 }
 

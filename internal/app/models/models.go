@@ -64,3 +64,11 @@ type URL struct {
 	CreatedTS   time.Time // CreatedTS время создания URL.
 	IsDeleted   bool      // IsDeleted флаг, указывающий, был ли URL удален.
 }
+
+// UserInfo определяет тип для передачи информации о пользователе.
+type USER string
+
+// UserID используется для получения и передачи идентификатора пользователя.
+const (
+	UserID USER = "UserID"
+)

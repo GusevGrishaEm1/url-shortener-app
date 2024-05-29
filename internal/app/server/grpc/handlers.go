@@ -3,10 +3,12 @@ package grpc
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/security"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // ShortenerService определяет методы для взаимодействия с сервисом сокращения URL.
@@ -40,13 +42,30 @@ func NewShortenerHandler(config config.Config, service ShortenerService) *shorte
 	}
 }
 
+func UnarySecurityInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, errors.New("user ID not found in metadata")
+	}
+	userIDStr := md.Get(string(models.UserID))
+	if len(userIDStr) == 0 {
+		return nil, errors.New("user ID not found in metadata")
+	}
+	userID, err := strconv.Atoi(userIDStr[0])
+	if err != nil {
+		return nil, err
+	}
+	resp, err = handler(context.WithValue(ctx, models.UserID, userID), req)
+	return resp, err
+}
+
 // CreateShortURL создает сокращенный URL на основе исходного URL.
 func (s *shortenerHandler) CreateShortURL(ctx context.Context, in *CreateShortURLRequest) (*CreateShortURLResponse, error) {
-	user, ok := ctx.Value(security.UserID).(models.UserInfo)
+	userID, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}
-	shortURL, err := s.service.CreateShortURL(ctx, user, in.URL)
+	shortURL, err := s.service.CreateShortURL(ctx, models.UserInfo{UserID: userID}, in.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +76,7 @@ func (s *shortenerHandler) CreateShortURL(ctx context.Context, in *CreateShortUR
 
 // CreateBatchShortURL создает несколько сокращенных URL на основе списка исходных URL.
 func (s *shortenerHandler) CreateBatchShortURL(ctx context.Context, in *CreateBatchShortURLRequest) (*CreateBatchShortURLResponse, error) {
-	user, ok := ctx.Value(security.UserID).(models.UserInfo)
+	userID, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}
@@ -65,7 +84,7 @@ func (s *shortenerHandler) CreateBatchShortURL(ctx context.Context, in *CreateBa
 	for _, url := range in.URLS {
 		urlsOrig = append(urlsOrig, models.OriginalURLInfoBatch{OriginalURL: url.OriginalUrl, CorrelationID: url.CorrelationId})
 	}
-	urlsShort, err := s.service.CreateBatchShortURL(ctx, user, urlsOrig)
+	urlsShort, err := s.service.CreateBatchShortURL(ctx, models.UserInfo{UserID: userID}, urlsOrig)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +100,7 @@ func (s *shortenerHandler) CreateBatchShortURL(ctx context.Context, in *CreateBa
 
 // GetByShortURL возвращает исходный URL по сокращенному URL.
 func (s *shortenerHandler) GetByShortURL(ctx context.Context, in *GetByShortURLRequest) (*GetByShortURLResponse, error) {
-	_, ok := ctx.Value(security.UserID).(models.UserInfo)
+	_, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}
@@ -89,12 +108,12 @@ func (s *shortenerHandler) GetByShortURL(ctx context.Context, in *GetByShortURLR
 	if err != nil {
 		return nil, err
 	}
-	return &GetByShortURLResponse{OriginalUrl: urlOrig}, nil
+	return &GetByShortURLResponse{OriginalURL: urlOrig}, nil
 }
 
 // PingStorage проверяет доступность хранилища данных.
 func (s *shortenerHandler) PingStorage(ctx context.Context, in *PingStorageRequest) (*PingStorageResponse, error) {
-	_, ok := ctx.Value(security.UserID).(models.UserInfo)
+	_, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}
@@ -104,11 +123,11 @@ func (s *shortenerHandler) PingStorage(ctx context.Context, in *PingStorageReque
 
 // GetUrlsByUser возвращает список URL, созданных пользователем.
 func (s *shortenerHandler) GetUrlsByUser(ctx context.Context, in *GetUrlsByUserRequest) (*GetUrlsByUserResponse, error) {
-	user, ok := ctx.Value(security.UserID).(models.UserInfo)
+	userID, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}
-	urls, err := s.service.GetUrlsByUser(ctx, user)
+	urls, err := s.service.GetUrlsByUser(ctx, models.UserInfo{UserID: userID})
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +143,7 @@ func (s *shortenerHandler) GetUrlsByUser(ctx context.Context, in *GetUrlsByUserR
 
 // DeleteUrlsByUser удаляет список URL, созданных пользователем.
 func (s *shortenerHandler) DeleteUrlsByUser(ctx context.Context, in *DeleteUrlsByUserRequest) (*DeleteUrlsByUserResponse, error) {
-	user, ok := ctx.Value(security.UserID).(models.UserInfo)
+	userID, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}
@@ -132,13 +151,13 @@ func (s *shortenerHandler) DeleteUrlsByUser(ctx context.Context, in *DeleteUrlsB
 	for _, url := range in.URLS {
 		urlsToDelete = append(urlsToDelete, url.ShortURL)
 	}
-	s.service.DeleteUrlsByUser(ctx, user, urlsToDelete)
+	s.service.DeleteUrlsByUser(ctx, models.UserInfo{UserID: userID}, urlsToDelete)
 	return &DeleteUrlsByUserResponse{}, nil
 }
 
 // GetStats возвращающий в ответ объект статистики.
 func (s *shortenerHandler) GetStats(ctx context.Context, in *GetStatsRequest) (*GetStatsResponse, error) {
-	_, ok := ctx.Value(security.UserID).(models.UserInfo)
+	_, ok := ctx.Value(models.UserID).(int)
 	if !ok {
 		return nil, errors.New("invalid user id")
 	}

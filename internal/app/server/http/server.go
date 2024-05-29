@@ -31,10 +31,10 @@ import (
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/logger"
-	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/gzip"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/security"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/trustedsubnet"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/handlers"
+	gzipreq "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/middlewares/gzip"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/middlewares/security"
+	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/server/http/middlewares/trustedsubnet"
+
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/service"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/storage"
 	"github.com/go-chi/chi/middleware"
@@ -103,7 +103,7 @@ func StartServer(ctx context.Context, config config.Config) error {
 	compress := gzipreq.NewCompressionMiddleware()
 	security := security.NewSecurityMiddleware(service)
 	subnet := trustedsubnet.NewTrustedSubnetMiddleware(config)
-	handler := handlers.NewShortenerHandler(config, service)
+	handler := NewShortenerHandler(config, service)
 	handlersAndMiddlewares := handlersAndMiddlewares{
 		handler,
 		security,

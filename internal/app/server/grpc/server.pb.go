@@ -268,7 +268,7 @@ type GetByShortURLResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	OriginalUrl string `protobuf:"bytes,1,opt,name=original_url,json=originalUrl,proto3" json:"original_url,omitempty"` // OriginalURL исходный URL.
+	OriginalURL string `protobuf:"bytes,1,opt,name=original_url,json=originalUrl,proto3" json:"original_url,omitempty"` // OriginalURL исходный URL.
 	Error       string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`                                // Error ошибка.
 }
 
@@ -306,7 +306,7 @@ func (*GetByShortURLResponse) Descriptor() ([]byte, []int) {
 
 func (x *GetByShortURLResponse) GetOriginalUrl() string {
 	if x != nil {
-		return x.OriginalUrl
+		return x.OriginalURL
 	}
 	return ""
 }

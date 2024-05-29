@@ -1,4 +1,4 @@
-package handlers
+package http
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
 	customerrors "github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/errors"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/security"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 )
 
@@ -304,7 +303,7 @@ func (handler *shortenerHandler) StatsHandler(res http.ResponseWriter, req *http
 
 func (*shortenerHandler) getUserInfo(ctx context.Context) models.UserInfo {
 	userInfo := models.UserInfo{}
-	if user := ctx.Value(security.UserID); user != nil {
+	if user := ctx.Value(models.UserID); user != nil {
 		userID, ok := user.(int)
 		if ok {
 			userInfo.UserID = userID

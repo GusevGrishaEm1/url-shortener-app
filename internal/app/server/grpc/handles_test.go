@@ -6,55 +6,14 @@ import (
 	"testing"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
-	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/middlewares/security"
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/models"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-// MockShortenerService is a mock implementation of ShortenerService.
-type MockShortenerService struct {
-	mock.Mock
-}
-
-func (m *MockShortenerService) CreateShortURL(ctx context.Context, userInfo models.UserInfo, originalURL string) (string, error) {
-	args := m.Called(ctx, userInfo, originalURL)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockShortenerService) CreateBatchShortURL(ctx context.Context, userInfo models.UserInfo, arr []models.OriginalURLInfoBatch) ([]models.ShortURLInfoBatch, error) {
-	args := m.Called(ctx, userInfo, arr)
-	return args.Get(0).([]models.ShortURLInfoBatch), args.Error(1)
-}
-
-func (m *MockShortenerService) GetByShortURL(ctx context.Context, shortURL string) (string, error) {
-	args := m.Called(ctx, shortURL)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockShortenerService) PingStorage(ctx context.Context) bool {
-	args := m.Called(ctx)
-	return args.Bool(0)
-}
-
-func (m *MockShortenerService) GetUrlsByUser(ctx context.Context, userInfo models.UserInfo) ([]models.URLByUser, error) {
-	args := m.Called(ctx, userInfo)
-	return args.Get(0).([]models.URLByUser), args.Error(1)
-}
-
-func (m *MockShortenerService) DeleteUrlsByUser(ctx context.Context, userInfo models.UserInfo, urls []string) {
-	m.Called(ctx, userInfo, urls)
-}
-
-func (m *MockShortenerService) GetStats(ctx context.Context) (models.Stats, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(models.Stats), args.Error(1)
-}
 
 func TestCreateShortURL(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{BaseReturnURL: "http://short.url"}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &CreateShortURLRequest{URL: "http://example.com"}
 
 	mockService.On("CreateShortURL", ctx, models.UserInfo{UserID: 1}, "http://example.com").Return("abc123", nil)
@@ -69,7 +28,7 @@ func TestCreateShortURL(t *testing.T) {
 func TestCreateShortURLError(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{BaseReturnURL: "http://short.url"}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &CreateShortURLRequest{URL: "http://example.com"}
 
 	mockService.On("CreateShortURL", ctx, models.UserInfo{UserID: 1}, "http://example.com").Return("", errors.New("service error"))
@@ -84,7 +43,7 @@ func TestCreateShortURLError(t *testing.T) {
 func TestCreateBatchShortURL(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{BaseReturnURL: "http://short.url"}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &CreateBatchShortURLRequest{
 		URLS: []*CreateBatchShortURLRequestItem{
 			{OriginalUrl: "http://example1.com", CorrelationId: "1"},
@@ -112,14 +71,14 @@ func TestCreateBatchShortURL(t *testing.T) {
 func TestGetByShortURL(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &GetByShortURLRequest{ShortURL: "short1"}
 
 	mockService.On("GetByShortURL", ctx, "short1").Return("http://example1.com", nil)
 
 	response, err := handler.GetByShortURL(ctx, request)
 	assert.NoError(t, err)
-	assert.Equal(t, "http://example1.com", response.OriginalUrl)
+	assert.Equal(t, "http://example1.com", response.OriginalURL)
 
 	mockService.AssertExpectations(t)
 }
@@ -127,7 +86,7 @@ func TestGetByShortURL(t *testing.T) {
 func TestPingStorage(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &PingStorageRequest{}
 
 	mockService.On("PingStorage", ctx).Return(true)
@@ -142,7 +101,7 @@ func TestPingStorage(t *testing.T) {
 func TestGetUrlsByUser(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{BaseReturnURL: "http://short.url"}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &GetUrlsByUserRequest{}
 
 	mockService.On("GetUrlsByUser", ctx, models.UserInfo{UserID: 1}).Return([]models.URLByUser{
@@ -162,7 +121,7 @@ func TestGetUrlsByUser(t *testing.T) {
 func TestDeleteUrlsByUser(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &DeleteUrlsByUserRequest{
 		URLS: []*DeleteUrlsByUserRequestItem{
 			{ShortURL: "short1"},
@@ -181,7 +140,7 @@ func TestDeleteUrlsByUser(t *testing.T) {
 func TestGetStats(t *testing.T) {
 	mockService := new(MockShortenerService)
 	handler := NewShortenerHandler(config.Config{}, mockService)
-	ctx := context.WithValue(context.Background(), security.UserID, models.UserInfo{UserID: 1})
+	ctx := context.WithValue(context.Background(), models.UserID, 1)
 	request := &GetStatsRequest{}
 
 	mockService.On("GetStats", ctx).Return(models.Stats{URLS: 100, Users: 10}, nil)

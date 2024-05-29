@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/GusevGrishaEm1/url-shortener-app.git/internal/app/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTrustedSubnet(t *testing.T) {
@@ -31,10 +32,11 @@ func TestTrustedSubnet(t *testing.T) {
 		request.Header.Add("X-Real-IP", test.ip)
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, request)
-		if rr.Code == http.StatusOK {
-			if test.isForbidden {
-				t.Errorf("TrustedSubnetMiddleware() forbidden request, got %v", rr.Code)
-			}
-		}
+		assert.Falsef(
+			t,
+			rr.Code == http.StatusOK && test.isForbidden,
+			"TrustedSubnetMiddleware() forbidden request, got %v",
+			rr.Code,
+		)
 	}
 }
