@@ -14,8 +14,12 @@ jobs:
     steps:
       - name: Check branch name
         run: |
-          if [[ ! $GITHUB_HEAD_REF =~ ^iter[0-9]+$ ]]; then echo "Branch name must match pattern 'iter<number>'" && exit 1; fi
-
+          if [[ $GITHUB_HEAD_REF == "main" ]]; then
+            echo "Branch name is 'main', skipping the check."
+          elif [[ ! $GITHUB_HEAD_REF =~ ^iter[0-9]+$ ]]; then
+            echo "Branch name must match pattern 'iter<number>'"
+            exit 1
+          fi
   shortenertest:
     runs-on: ubuntu-latest
     container: golang:1.21
